@@ -1,5 +1,5 @@
 import "server-only";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { z } from "zod";
 import { aiProvider } from "./env";
 import type { Stand } from "./types";
@@ -44,6 +44,8 @@ async function askAboutImage<T>(schema: z.ZodType<T>, image: Image, system: stri
         responseMimeType: "application/json",
         responseJsonSchema: z.toJSONSchema(schema),
         temperature: 0,
+        // Recognising a few items against a short catalog needs little reasoning; low thinking keeps checkout fast.
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       },
     });
     text = response.text;
