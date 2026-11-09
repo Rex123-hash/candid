@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
@@ -30,7 +31,7 @@ const fileBackend: Backend = {
   async set(key, value) {
     await fs.mkdir(DATA_DIR, { recursive: true });
     const file = path.join(DATA_DIR, `${safeKey(key)}.json`);
-    const tmp = `${file}.${process.pid}.tmp`;
+    const tmp = `${file}.${randomUUID()}.tmp`;
     await fs.writeFile(tmp, value, "utf8");
     await fs.rename(tmp, file);
   },
@@ -68,13 +69,20 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
 export async function getStandRecord(standId: string): Promise<StandRecord | null> {
   const raw = await backend.get(`stand:${standId}`);
   if (raw) return JSON.parse(raw) as StandRecord;
-  if (standId === DEMO_STAND_ID) {
-    const seeded = demoStandRecord();
-    await backend.set(`stand:${standId}`, JSON.stringify(seeded));
-    await backend.set(`slug:${seeded.stand.slug}`, standId);
-    return seeded;
-  }
-  return null;
+  if (standId !== DEMO_STAND_ID) return null;
+  // Seed the demo stand on first use, once, even under concurrent requests.
+  return withLock(`stand:${standId}`, () => readOrSeed(standId));
+}
+
+/** Reads a stand, seeding the demo stand if needed. Callers must hold the stand's lock. */
+async function readOrSeed(standId: string): Promise<StandRecord | null> {
+  const existing = await backend.get(`stand:${standId}`);
+  if (existing) return JSON.parse(existing) as StandRecord;
+  if (standId !== DEMO_STAND_ID) return null;
+  const seeded = demoStandRecord();
+  await backend.set(`stand:${standId}`, JSON.stringify(seeded));
+  await backend.set(`slug:${seeded.stand.slug}`, standId);
+  return seeded;
 }
 
 export async function getStandIdBySlug(slug: string): Promise<string | null> {
@@ -93,7 +101,7 @@ export async function createStandRecord(record: StandRecord): Promise<void> {
 /** Read-modify-write of one stand under a lock. */
 export async function updateStandRecord<T>(standId: string, change: (record: StandRecord) => T | Promise<T>): Promise<T> {
   return withLock(`stand:${standId}`, async () => {
-    const record = await getStandRecord(standId);
+    const record = await readOrSeed(standId);
     if (!record) throw new Error(`Unknown stand ${standId}`);
     const result = await change(record);
     await backend.set(`stand:${standId}`, JSON.stringify(record));
