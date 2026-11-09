@@ -1,10 +1,11 @@
 import "server-only";
-import { capturePayPalOrder } from "./paypal";
+import { capturePayPalOrder, getPayPalOrderStatus } from "./paypal";
 import { standIdForOrder, updateStandRecord } from "./store";
 import type { Sale } from "./types";
 
 export type CaptureResult =
   | { state: "paid"; sale: Sale }
+  | { state: "not-approved" }
   | { state: "failed"; reason: string; retryable: boolean }
   | { state: "unknown-order" };
 
@@ -20,6 +21,12 @@ export async function captureSale(orderId: string): Promise<CaptureResult> {
     const sale = record.sales.find((s) => s.paypalOrderId === orderId);
     if (!sale) return { state: "unknown-order" } as const;
     if (sale.status === "CAPTURED") return { state: "paid", sale } as const;
+
+    // Ask PayPal first, so a cancelled or abandoned checkout is never captured or
+    // flagged. COMPLETED means an earlier capture went through but its reply was lost:
+    // capturing again with the same request id returns that same capture.
+    const status = await getPayPalOrderStatus(sale.paypalOrderId);
+    if (status !== "APPROVED" && status !== "COMPLETED") return { state: "not-approved" } as const;
 
     const outcome = await capturePayPalOrder(sale, record.stand.currency);
     if (outcome.ok) {

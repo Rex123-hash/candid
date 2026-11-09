@@ -5,12 +5,16 @@ import type { Sale, StandRecord } from "@/lib/types";
 // In-memory stand of record, so capture logic is tested without PayPal or disk.
 let record: StandRecord;
 const capturePayPalOrder = vi.fn();
+const getPayPalOrderStatus = vi.fn();
 
 vi.mock("@/lib/store", () => ({
   standIdForOrder: async (orderId: string) => (orderId.startsWith("ORDER") ? record.stand.id : null),
   updateStandRecord: async <T>(_id: string, change: (r: StandRecord) => T | Promise<T>) => change(record),
 }));
-vi.mock("@/lib/paypal", () => ({ capturePayPalOrder: (...args: unknown[]) => capturePayPalOrder(...args) }));
+vi.mock("@/lib/paypal", () => ({
+  capturePayPalOrder: (...args: unknown[]) => capturePayPalOrder(...args),
+  getPayPalOrderStatus: (...args: unknown[]) => getPayPalOrderStatus(...args),
+}));
 
 const { captureSale, confirmCaptureFromWebhook } = await import("@/lib/sales");
 
@@ -32,6 +36,8 @@ beforeEach(() => {
   record = demoStandRecord();
   record.sales.push(newSale());
   capturePayPalOrder.mockReset();
+  getPayPalOrderStatus.mockReset();
+  getPayPalOrderStatus.mockResolvedValue("APPROVED");
 });
 
 describe("captureSale", () => {
@@ -63,6 +69,20 @@ describe("captureSale", () => {
     const result = await captureSale("ORDER1");
     expect(result.state).toBe("failed");
     expect(record.sales[0].status).toBe("ATTENTION");
+  });
+
+  it("never captures or flags an order the buyer didn't approve (cancelled popup)", async () => {
+    getPayPalOrderStatus.mockResolvedValue("PAYER_ACTION_REQUIRED");
+    expect((await captureSale("ORDER1")).state).toBe("not-approved");
+    expect(capturePayPalOrder).not.toHaveBeenCalled();
+    expect(record.sales[0].status).toBe("CREATED");
+  });
+
+  it("recovers a capture whose reply was lost (order already COMPLETED)", async () => {
+    getPayPalOrderStatus.mockResolvedValue("COMPLETED");
+    capturePayPalOrder.mockResolvedValue({ ok: true, captureId: "CAP2" });
+    expect((await captureSale("ORDER1")).state).toBe("paid");
+    expect(record.sales[0].captureId).toBe("CAP2");
   });
 
   it("rejects unknown orders", async () => {

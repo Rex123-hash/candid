@@ -1,5 +1,15 @@
 import "server-only";
-import { ApiError, CheckoutPaymentIntent, Client, Environment, OrdersController } from "@paypal/paypal-server-sdk";
+import {
+  ApiError,
+  CheckoutPaymentIntent,
+  Client,
+  Environment,
+  OrdersController,
+  PaypalExperienceUserAction,
+  PaypalWalletContextShippingPreference,
+  VenmoWalletExperienceContextShippingPreference,
+  VenmoWalletExperienceContextUserAction,
+} from "@paypal/paypal-server-sdk";
 import { centsToValue, valueToCents } from "./money";
 import { PAYPAL_API_BASE, paypalCredentials } from "./env";
 import type { Item, Sale, Stand } from "./types";
@@ -40,14 +50,47 @@ function toPayPalError(error: unknown, action: string): PayPalError {
   return new PayPalError(`PayPal couldn't ${action}.`);
 }
 
-export async function createPayPalOrder(stand: Stand, sale: Pick<Sale, "id" | "lines" | "totalCents">): Promise<string> {
+/**
+ * Opens an order for the priced basket. "Pay now" with no shipping: a stand sale
+ * is complete the moment the buyer approves, and nothing is delivered. The return
+ * and cancel URLs bring a redirected buyer back to the stand page.
+ */
+export async function createPayPalOrder(
+  stand: Stand,
+  sale: Pick<Sale, "id" | "lines" | "totalCents" | "method">,
+  urls: { returnUrl: string; cancelUrl: string },
+): Promise<string> {
   const currencyCode = stand.currency;
+  const brandName = stand.name.slice(0, 127);
+  const paymentSource =
+    sale.method === "venmo"
+      ? {
+          venmo: {
+            experienceContext: {
+              brandName,
+              shippingPreference: VenmoWalletExperienceContextShippingPreference.NoShipping,
+              userAction: VenmoWalletExperienceContextUserAction.PayNow,
+            },
+          },
+        }
+      : {
+          paypal: {
+            experienceContext: {
+              brandName,
+              shippingPreference: PaypalWalletContextShippingPreference.NoShipping,
+              userAction: PaypalExperienceUserAction.PayNow,
+              returnUrl: urls.returnUrl,
+              cancelUrl: urls.cancelUrl,
+            },
+          },
+        };
   try {
     const { result } = await orders().createOrder({
       paypalRequestId: `create-${sale.id}`,
       prefer: "return=minimal",
       body: {
         intent: CheckoutPaymentIntent.Capture,
+        paymentSource,
         purchaseUnits: [
           {
             referenceId: stand.id,
@@ -72,6 +115,16 @@ export async function createPayPalOrder(stand: Stand, sale: Pick<Sale, "id" | "l
     return result.id;
   } catch (error) {
     throw error instanceof PayPalError ? error : toPayPalError(error, "create the order");
+  }
+}
+
+/** The order's current status at PayPal, e.g. CREATED, APPROVED, COMPLETED. */
+export async function getPayPalOrderStatus(orderId: string): Promise<string> {
+  try {
+    const { result } = await orders().getOrder({ id: orderId });
+    return result.status ?? "UNKNOWN";
+  } catch (error) {
+    throw toPayPalError(error, "look up the order");
   }
 }
 

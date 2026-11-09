@@ -14,7 +14,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { lines, totalCents } = priceCart(stand, cart);
 
     const saleId = randomUUID();
-    const paypalOrderId = await createPayPalOrder(stand, { id: saleId, lines, totalCents });
+    const standUrl = new URL(`/s/${stand.slug}`, request.url);
+    const paypalOrderId = await createPayPalOrder(
+      stand,
+      { id: saleId, lines, totalCents, method },
+      { returnUrl: `${standUrl.href}?paypal=return`, cancelUrl: `${standUrl.href}?paypal=cancel` },
+    );
     const sale: Sale = {
       id: saleId,
       standId: stand.id,

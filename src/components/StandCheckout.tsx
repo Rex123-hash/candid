@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, formatCents, photoToJpeg } from "@/lib/client";
 import type { PublicStand } from "@/lib/public";
 import { Icon } from "./Icon";
@@ -18,6 +18,26 @@ export function StandCheckout({ stand }: { stand: PublicStand }) {
   const [status, setStatus] = useState<Status>(null);
   const [receipt, setReceipt] = useState<PaidReceipt | null>(null);
   const receiptHeading = useRef<HTMLHeadingElement>(null);
+
+  // If PayPal redirected back here (no popup), finish the payment from the URL's order token.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const outcome = params.get("paypal");
+    if (!outcome) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (outcome !== "return" || !token) {
+      setStatus({ message: "Payment cancelled. Nothing was charged.", tone: "info" });
+      return;
+    }
+    setStatus({ message: "Confirming your payment with PayPal…", tone: "info" });
+    api<PaidReceipt>(`/api/orders/${encodeURIComponent(token)}/capture`, { method: "POST", body: {} })
+      .then((paid) => {
+        setReceipt(paid);
+        setStatus({ message: `Paid ${formatCents(paid.totalCents)}. Thank you!`, tone: "success" });
+      })
+      .catch((error: unknown) => setStatus({ message: error instanceof Error ? error.message : "We couldn't confirm the payment.", tone: "error" }));
+  }, []);
 
   const lines = useMemo(
     () => Object.entries(quantities).filter(([, qty]) => qty > 0).map(([itemId, qty]) => ({ itemId, qty })),

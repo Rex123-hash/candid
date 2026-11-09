@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/client";
+import { api, ApiError } from "@/lib/client";
 
 /**
  * PayPal JS SDK v6 one-time payments with PayPal and Venmo buttons. The server
@@ -103,18 +103,19 @@ export function PayPalCheckout({ standId, lines, disabled, onPaid, onStatus }: P
 
   async function pay(method: "paypal" | "venmo") {
     if (!sdk || disabled) return;
+    let orderId: string | null = null;
     const callbacks: SessionCallbacks = {
-      async onApprove({ orderId }) {
+      async onApprove(data) {
         latest.current.onStatus("Payment approved. Confirming with PayPal…", "info");
-        try {
-          const receipt = await api<PaidReceipt>(`/api/orders/${encodeURIComponent(orderId)}/capture`, { method: "POST", body: {} });
-          latest.current.onPaid(receipt);
-        } catch (error) {
-          latest.current.onStatus(error instanceof Error ? error.message : "We couldn't confirm the payment.", "error");
-        }
+        const result = await capture(data.orderId);
+        if (result.kind === "error") latest.current.onStatus(result.message, "error");
       },
-      onCancel() {
-        latest.current.onStatus("Payment cancelled. Nothing was charged.", "info");
+      async onCancel() {
+        // A popup closed after approval still counts: the server checks with PayPal
+        // and only captures an order the buyer actually approved.
+        const result = orderId ? await capture(orderId) : { kind: "not-approved" as const };
+        if (result.kind === "not-approved") latest.current.onStatus("Payment cancelled. Nothing was charged.", "info");
+        else if (result.kind === "error") latest.current.onStatus(result.message, "error");
       },
       onError() {
         latest.current.onStatus("PayPal hit a problem. Nothing was charged. Please try again.", "error");
@@ -124,6 +125,9 @@ export function PayPalCheckout({ standId, lines, disabled, onPaid, onStatus }: P
     // Start the order request without awaiting it, so the popup keeps the click's user activation.
     const orderPromise = api<{ orderId: string }>(`/api/stands/${standId}/orders`, {
       body: { lines: latest.current.lines, method },
+    }).then((order) => {
+      orderId = order.orderId;
+      return order;
     });
     orderPromise.catch((error: unknown) => {
       latest.current.onStatus(error instanceof Error ? error.message : "We couldn't start the payment.", "error");
@@ -132,6 +136,16 @@ export function PayPalCheckout({ standId, lines, disabled, onPaid, onStatus }: P
       await session.start({ presentationMode: "auto" }, orderPromise);
     } catch {
       // Order or popup errors are already reported through the callbacks above.
+    }
+  }
+
+  async function capture(orderId: string): Promise<{ kind: "paid" } | { kind: "not-approved" } | { kind: "error"; message: string }> {
+    try {
+      latest.current.onPaid(await api<PaidReceipt>(`/api/orders/${encodeURIComponent(orderId)}/capture`, { method: "POST", body: {} }));
+      return { kind: "paid" };
+    } catch (error) {
+      if (error instanceof ApiError && error.body.notApproved) return { kind: "not-approved" };
+      return { kind: "error", message: error instanceof Error ? error.message : "We couldn't confirm the payment." };
     }
   }
 
