@@ -1,0 +1,123 @@
+import { z } from "zod";
+
+export const MAX_QTY_PER_LINE = 50;
+
+export type Grower = {
+  id: string;
+  name: string;
+  /** Sandbox PayPal email that receives this grower's share. */
+  paypalEmail: string;
+};
+
+export type Item = {
+  id: string;
+  name: string;
+  priceCents: number;
+  /** "jar", "dozen", "bunch", ... shown after the price. */
+  unit: string;
+  growerId: string | null;
+  /** What the item looks like, used to help the vision model tell items apart. */
+  lookFor: string;
+  paypalProductId?: string;
+};
+
+export type Stand = {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string;
+  location: string;
+  currency: "USD";
+  items: Item[];
+  growers: Grower[];
+  isDemo: boolean;
+  /** SHA-256 of the owner key. The raw key only ever lives in the owner's cookie. */
+  ownerKeyHash: string;
+  createdAt: string;
+};
+
+export type SaleLine = { itemId: string; name: string; qty: number; unitCents: number };
+
+export type SaleStatus = "CREATED" | "CAPTURED" | "ATTENTION";
+
+export type Sale = {
+  id: string;
+  standId: string;
+  lines: SaleLine[];
+  totalCents: number;
+  method: "paypal" | "venmo";
+  status: SaleStatus;
+  paypalOrderId: string;
+  /** Reused on every capture attempt so PayPal treats retries as one capture. */
+  captureRequestId: string;
+  captureId?: string;
+  attentionReason?: string;
+  createdAt: string;
+  capturedAt?: string;
+};
+
+export type ShelfCount = {
+  id: string;
+  standId: string;
+  kind: "open" | "close";
+  counts: Record<string, number>;
+  notes: string;
+  createdAt: string;
+};
+
+export type PayoutRecord = {
+  id: string;
+  standId: string;
+  batchId: string;
+  status: string;
+  lines: { growerId: string; name: string; email: string; cents: number }[];
+  saleIds: string[];
+  createdAt: string;
+};
+
+export type StandRecord = {
+  stand: Stand;
+  sales: Sale[];
+  shelfCounts: ShelfCount[];
+  payouts: PayoutRecord[];
+};
+
+// Request schemas: everything that crosses the network boundary is validated here.
+
+export const CartLineSchema = z.object({
+  itemId: z.string().min(1).max(64),
+  qty: z.number().int().min(1).max(MAX_QTY_PER_LINE),
+});
+
+export const CreateOrderSchema = z.object({
+  lines: z.array(CartLineSchema).min(1).max(30),
+  method: z.enum(["paypal", "venmo"]),
+});
+
+export const ImageSchema = z.object({
+  /** Base64 without the data: prefix. */
+  data: z.string().min(100).max(8_000_000),
+  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+});
+
+export const DraftItemSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  priceCents: z.number().int().min(1).max(100_000),
+  unit: z.string().trim().max(20),
+  lookFor: z.string().trim().max(160),
+  growerId: z.string().max(64).nullable(),
+});
+
+export const CreateStandSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  location: z.string().trim().max(80),
+  items: z.array(DraftItemSchema).min(1).max(30),
+  growers: z
+    .array(z.object({ id: z.string().max(64), name: z.string().trim().min(1).max(60), paypalEmail: z.email() }))
+    .max(10),
+});
+
+export const ShelfCountSchema = z.object({
+  kind: z.enum(["open", "close"]),
+  counts: z.record(z.string().max(64), z.number().int().min(0).max(10_000)),
+});
