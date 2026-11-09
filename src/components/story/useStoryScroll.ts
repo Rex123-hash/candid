@@ -38,6 +38,13 @@ export function useSmoothScroll(enabled: boolean): void {
   }, [enabled]);
 }
 
+/** Pauses or resumes smooth scrolling (used while the preloader is up). */
+export function setScrollLocked(locked: boolean): void {
+  if (!lenis) return;
+  if (locked) lenis.stop();
+  else lenis.start();
+}
+
 /** Scrolls to an element or y position, smoothly when Lenis is running. */
 export function scrollToY(y: number): void {
   if (lenis) lenis.scrollTo(y, { duration: 1.2 });

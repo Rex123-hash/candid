@@ -67,6 +67,20 @@ export const CHAPTERS: Chapter[] = [
 /** Scroll progress through the story, written by the scroll driver and read every frame. */
 export const storyState = { progress: 0 };
 
+/** Fired once, when the 3D stage has rendered its first frame. */
+export const SCENE_READY_EVENT = "candid:scene-ready";
+let sceneReady = false;
+
+export function markSceneReady(): void {
+  if (sceneReady) return;
+  sceneReady = true;
+  window.dispatchEvent(new Event(SCENE_READY_EVENT));
+}
+
+export function isSceneReady(): boolean {
+  return sceneReady;
+}
+
 export function chapterAt(progress: number): number {
   return Math.min(CHAPTERS.length - 1, Math.max(0, Math.floor(progress * CHAPTERS.length)));
 }

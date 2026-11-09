@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { MathUtils, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { CashBox, EggCarton, GrowerToken, HoneyJars, Phone, StandTable, Sunflowers, TomatoPunnet } from "../three/models";
 import { PhoneScreen } from "../three/PhoneScreen";
-import { CHAPTERS, chapterAt, chapterProgress, storyState } from "./chapters";
+import { CHAPTERS, chapterAt, chapterProgress, markSceneReady, storyState } from "./chapters";
 
 /**
  * The pinned 3D stage of the landing story. Scroll progress (storyState) moves
@@ -55,6 +55,7 @@ export default function StoryScene({ reducedMotion }: { reducedMotion: boolean }
           <Lightformer form="ring" intensity={0.6} color="#ffe2b0" position={[4, 2, 3]} scale={2} />
         </Environment>
 
+        <FirstFrame />
         <CameraRig reducedMotion={reducedMotion} />
         <Stage reducedMotion={reducedMotion} />
 
@@ -67,6 +68,16 @@ export default function StoryScene({ reducedMotion }: { reducedMotion: boolean }
       </Canvas>
     </div>
   );
+}
+
+/** Tells the preloader the stage is visible, a couple of frames after the first render. */
+function FirstFrame() {
+  const frames = useRef(0);
+  useFrame(() => {
+    frames.current += 1;
+    if (frames.current === 3) markSceneReady();
+  });
+  return null;
 }
 
 const camPos = new Vector3();

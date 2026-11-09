@@ -4,12 +4,13 @@ import { useGSAP } from "@gsap/react";
 import { SplitText } from "gsap/SplitText";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../Icon";
 import { Magnetic } from "../fx/Magnetic";
 import { CHAPTERS, chapterAt, storyState } from "./chapters";
 import { ExplainerPlayer } from "./ExplainerPlayer";
-import { gsap, scrollToY, ScrollTrigger, usePrefersReducedMotion, useSmoothScroll } from "./useStoryScroll";
+import { Preloader } from "./Preloader";
+import { gsap, scrollToY, ScrollTrigger, setScrollLocked, usePrefersReducedMotion, useSmoothScroll } from "./useStoryScroll";
 
 gsap.registerPlugin(SplitText);
 
@@ -38,8 +39,28 @@ export function Story() {
   const track = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
   useSmoothScroll(!reducedMotion);
+
+  // Hold scrolling until the preloader's shutter has opened.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setScrollLocked(!loaded);
+  }, [loaded]);
+
+  // The headline reveal waits for the preloader, so it plays where people can see it.
+  useGSAP(
+    () => {
+      if (!loaded || reducedMotion) return;
+      const split = SplitText.create(".hero-title", { type: "words,chars", mask: "words" });
+      gsap.from(split.chars, { yPercent: 110, duration: 1, ease: "expo.out", stagger: 0.025 });
+      gsap.from(".chapter-trust .hero-fade", { opacity: 0, y: 24, duration: 1, ease: "power3.out", stagger: 0.12, delay: 0.45 });
+      gsap.from(".night-header", { opacity: 0, y: -16, duration: 0.8, ease: "power3.out", delay: 0.3 });
+      return () => split.revert();
+    },
+    { scope: root, dependencies: [loaded, reducedMotion] },
+  );
 
   useGSAP(
     () => {
@@ -55,11 +76,6 @@ export function Story() {
       });
 
       if (reducedMotion) return;
-
-      // Headline reveal on load.
-      const split = SplitText.create(".hero-title", { type: "words,chars", mask: "words" });
-      gsap.from(split.chars, { yPercent: 110, duration: 1, ease: "expo.out", stagger: 0.025, delay: 0.15 });
-      gsap.from(".hero-fade", { opacity: 0, y: 24, duration: 1, ease: "power3.out", stagger: 0.12, delay: 0.7 });
 
       // Horizontal use-case slider, pinned while it scrolls sideways.
       const el = track.current;
@@ -92,6 +108,7 @@ export function Story() {
 
   return (
     <div ref={root} className="night">
+      <Preloader reducedMotion={reducedMotion} onDone={() => setLoaded(true)} />
       <header className="night-header">
         <Link href="/" className="brand night-brand" aria-label="Candid home">
           Candid<span>.</span>
