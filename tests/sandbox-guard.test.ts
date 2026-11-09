@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { assertSandbox, ConfigError, PAYPAL_API_BASE } from "@/lib/env";
 
 describe("sandbox guard", () => {
