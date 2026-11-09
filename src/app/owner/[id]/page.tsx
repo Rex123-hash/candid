@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { OwnerDashboard } from "@/components/OwnerDashboard";
 import { HttpError, requireOwner } from "@/lib/http";
 import { summarise } from "@/lib/summary";
@@ -15,25 +16,23 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
   } catch (error) {
     const message = error instanceof HttpError ? error.message : "This owner page isn't available.";
     return (
-      <main id="main" className="wrap narrow stack" style={{ paddingBlock: 64 }}>
-        <h1>Owner view</h1>
-        <p className="notice error">{message}</p>
-        <Link href="/" className="btn secondary">
-          Back to Candid
-        </Link>
-      </main>
+      <>
+        <AppHeader backHref="/app" backLabel="All demos" narrow />
+        <main id="main" className="wrap narrow stack" style={{ paddingBlock: 32 }}>
+          <h1>Owner view</h1>
+          <p className="notice error">{message}</p>
+          <Link href="/app" className="btn secondary">
+            Back to all demos
+          </Link>
+        </main>
+      </>
     );
   }
   const { stand } = record;
 
   return (
     <>
-      <header className="site-header wrap row" style={{ justifyContent: "space-between" }}>
-        <Link href="/" className="brand">
-          Candid<span>.</span>
-        </Link>
-        <span className="pill sandbox">{stand.isDemo ? "Demo stand · sandbox" : "Sandbox"}</span>
-      </header>
+      <AppHeader backHref="/app" backLabel="All demos" badge={stand.isDemo ? "Demo stand · sandbox" : "Sandbox"} />
       <main id="main" className="wrap stack" style={{ "--gap": "24px", paddingBottom: 64 } as React.CSSProperties}>
         <div className="stack" style={{ "--gap": "6px" } as React.CSSProperties}>
           <p className="eyebrow">Owner view</p>

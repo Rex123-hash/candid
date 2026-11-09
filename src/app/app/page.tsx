@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { Tilt } from "@/components/fx/Tilt";
 import { Icon, type IconName } from "@/components/Icon";
 
@@ -35,12 +36,7 @@ const DOORS: { href: string; icon: IconName; kicker: string; title: string; body
 export default function AppHome() {
   return (
     <>
-      <header className="site-header wrap row" style={{ justifyContent: "space-between" }}>
-        <Link href="/" className="brand" aria-label="Candid home">
-          Candid<span>.</span>
-        </Link>
-        <span className="pill sandbox">Sandbox demo</span>
-      </header>
+      <AppHeader backHref="/" backLabel="Home" />
       <main id="main" className="wrap stack app-home" style={{ "--gap": "32px", paddingBottom: 64 } as React.CSSProperties}>
         <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
           <p className="eyebrow">Welcome in</p>

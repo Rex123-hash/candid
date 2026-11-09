@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
 import { StandCheckout } from "@/components/StandCheckout";
 import { toPublicStand } from "@/lib/public";
 import { getStandIdBySlug, getStandRecord } from "@/lib/store";
@@ -24,12 +24,7 @@ export default async function StandPage({ params }: { params: Promise<{ slug: st
 
   return (
     <>
-      <header className="site-header wrap narrow row" style={{ justifyContent: "space-between" }}>
-        <Link href="/" className="brand">
-          Candid<span>.</span>
-        </Link>
-        <span className="pill sandbox">Sandbox demo</span>
-      </header>
+      <AppHeader backHref="/app" backLabel="All demos" narrow />
       <main id="main" className="wrap narrow stack" style={{ "--gap": "20px", paddingBottom: 48 } as React.CSSProperties}>
         <div className="stack" style={{ "--gap": "6px" } as React.CSSProperties}>
           <p className="eyebrow">Honesty checkout · {stand.location}</p>
