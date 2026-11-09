@@ -11,7 +11,7 @@ import type { Stand } from "./types";
  * re-validated against the stand's own catalog after the model answers.
  */
 
-export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 
 export class AiUnavailableError extends Error {}
 
@@ -27,7 +27,7 @@ function gemini(): GoogleGenAI {
       ? new GoogleGenAI({
           vertexai: true,
           project: process.env.GOOGLE_CLOUD_PROJECT,
-          location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+          location: process.env.GOOGLE_CLOUD_LOCATION ?? "global",
         })
       : new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   return client;

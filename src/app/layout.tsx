@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible, JetBrains_Mono, Schibsted_Grotesk } from "next/font/google";
 import { Cursor } from "@/components/fx/Cursor";
 import "./globals.css";
+import "./story.css";
 
 // Atkinson Hyperlegible was designed by the Braille Institute for low-vision readers.
 const body = Atkinson_Hyperlegible({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-body" });

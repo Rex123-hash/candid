@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, formatCents } from "@/lib/client";
 import type { StandSummary } from "@/lib/summary";
 import { Icon } from "./Icon";
@@ -22,6 +22,17 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
   const [paying, setPaying] = useState(false);
   const r = summary.reconciliation;
   const notify = (message: string, tone: "info" | "error" | "success") => setStatus({ message, tone });
+
+  // Refresh every 10 seconds so a customer's payment shows up without reloading.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      api<StandSummary>(`/api/stands/${stand.id}/summary`)
+        .then(setSummary)
+        .catch(() => undefined);
+    }, 10_000);
+    return () => window.clearInterval(timer);
+  }, [stand.id]);
 
   async function payGrowers() {
     setPaying(true);
