@@ -180,8 +180,8 @@ export function CashBox() {
   );
 }
 
-/** A phone with a glowing camera screen. */
-export function Phone({ screen = "#1a1410", glow = 0.6 }: { screen?: string; glow?: number }) {
+/** A phone body; the screen is supplied by the caller (e.g. a live canvas texture). */
+export function Phone({ children }: { children?: React.ReactNode }) {
   return (
     <group>
       <RoundedBox args={[0.46, 0.92, 0.05]} radius={0.06} smoothness={6} castShadow>
@@ -189,22 +189,8 @@ export function Phone({ screen = "#1a1410", glow = 0.6 }: { screen?: string; glo
       </RoundedBox>
       <mesh position={[0, 0, 0.027]}>
         <planeGeometry args={[0.4, 0.84]} />
-        <meshStandardMaterial color={screen} emissive="#f5a524" emissiveIntensity={glow} toneMapped={false} />
+        {children ?? <meshBasicMaterial color="#0d0d0d" />}
       </mesh>
-      {/* viewfinder brackets on the screen */}
-      {(
-        [
-          [-0.14, 0.3],
-          [0.14, 0.3],
-          [-0.14, -0.3],
-          [0.14, -0.3],
-        ] as const
-      ).map(([x, y]) => (
-        <mesh key={`${x}${y}`} position={[x, y, 0.03]}>
-          <planeGeometry args={[0.05, 0.05]} />
-          <meshBasicMaterial color="#fff6e5" transparent opacity={0.9} />
-        </mesh>
-      ))}
     </group>
   );
 }

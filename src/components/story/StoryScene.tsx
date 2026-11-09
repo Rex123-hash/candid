@@ -5,6 +5,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import { MathUtils, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { CashBox, EggCarton, GrowerToken, HoneyJars, Phone, StandTable, Sunflowers, TomatoPunnet } from "../three/models";
+import { PhoneScreen } from "../three/PhoneScreen";
 import { CHAPTERS, chapterAt, chapterProgress, storyState } from "./chapters";
 
 /**
@@ -161,7 +162,9 @@ function Stage({ reducedMotion }: { reducedMotion: boolean }) {
       </group>
 
       <group ref={phone} position={[-0.15, -1.5, 1.15]} rotation={[-0.12, -0.5, 0]} scale={0.72}>
-        <Phone glow={0.18} screen="#2b1c10" />
+        <Phone>
+          <PhoneScreen mode={() => (chapterAt(storyState.progress) >= 3 ? "pay" : "scan")} reducedMotion={reducedMotion} />
+        </Phone>
       </group>
 
       <mesh ref={beam} position={[-0.6, 1.0, 0.15]} rotation={[0, Math.PI / 2, 0]}>

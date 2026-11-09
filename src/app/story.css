@@ -135,13 +135,13 @@
 }
 
 .hero-title {
-  font-size: clamp(3rem, 8.5vw, 7.2rem);
+  font-size: clamp(2.4rem, min(8.5vw, 12vh), 7.2rem);
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
 
 .chapter-title {
-  font-size: clamp(2.2rem, 5vw, 4.2rem);
+  font-size: clamp(1.9rem, min(5vw, 8vh), 4.2rem);
   line-height: 1;
   letter-spacing: -0.03em;
 }
@@ -548,6 +548,33 @@
   }
   .story-vignette {
     background: linear-gradient(0deg, rgb(18 13 9 / 92%) 0%, rgb(18 13 9 / 40%) 50%, transparent 75%);
+  }
+}
+
+/* Short screens (landscape phones, small laptop windows) */
+@media (max-height: 680px) {
+  .chapter {
+    top: 56%;
+    gap: 12px;
+  }
+  .chapter-body {
+    font-size: 1rem;
+  }
+  .scroll-cue {
+    display: none;
+  }
+  .story-receipt {
+    padding: 10px 16px;
+  }
+  .count-stats dd {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-height: 480px) {
+  .chapter-body,
+  .chapter-kicker {
+    display: none;
   }
 }
 
