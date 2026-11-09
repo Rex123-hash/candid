@@ -33,10 +33,12 @@ export function StandTable() {
       <RoundedBox args={[1.2, 0.9, 0.06]} radius={0.03} position={[-0.3, 1.25, -0.68]} castShadow>
         <meshStandardMaterial color="#fbf8f1" roughness={0.9} />
       </RoundedBox>
-      <QrPattern position={[-0.3, 1.27, -0.645]} />
-      <mesh position={[-0.3, 0.75, -0.68]}>
-        <boxGeometry args={[0.06, 0.4, 0.06]} />
-        <meshStandardMaterial color={WOOD_DARK} />
+      <QrPattern position={[-0.3, 1.27, -0.638]} />
+      {/* sign post: set behind the board (not at the same depth) so the faces never
+          overlap, which caused z-fighting flicker */}
+      <mesh position={[-0.3, 0.74, -0.735]} castShadow>
+        <boxGeometry args={[0.06, 0.36, 0.04]} />
+        <meshStandardMaterial color={WOOD_DARK} roughness={0.8} />
       </mesh>
     </group>
   );
@@ -168,7 +170,7 @@ export function CashBox() {
       <RoundedBox args={[0.46, 0.22, 0.32]} radius={0.02} position={[0, 0.11, 0]} castShadow>
         <meshStandardMaterial color="#5c6670" metalness={0.65} roughness={0.35} />
       </RoundedBox>
-      <mesh position={[0, 0.222, 0]}>
+      <mesh position={[0, 0.226, 0]}>
         <boxGeometry args={[0.2, 0.004, 0.03]} />
         <meshBasicMaterial color="#0b0b0b" />
       </mesh>
@@ -187,7 +189,7 @@ export function Phone({ children }: { children?: React.ReactNode }) {
       <RoundedBox args={[0.46, 0.92, 0.05]} radius={0.06} smoothness={6} castShadow>
         <meshStandardMaterial color="#121212" metalness={0.5} roughness={0.25} />
       </RoundedBox>
-      <mesh position={[0, 0, 0.027]}>
+      <mesh position={[0, 0, 0.032]}>
         <planeGeometry args={[0.4, 0.84]} />
         {children ?? <meshBasicMaterial color="#0d0d0d" />}
       </mesh>
