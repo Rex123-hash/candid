@@ -47,11 +47,26 @@ npm run dev                  # http://localhost:3000
 | Variable | Where to get it |
 | --- | --- |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | developer.paypal.com → Apps & Credentials → Sandbox → Create App (enable Payouts) |
-| `GEMINI_API_KEY` | aistudio.google.com → Get API key (or use Vertex AI, see `.env.example`) |
+| `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT` | Your Google Cloud project with Vertex AI enabled; locally run `gcloud auth application-default login` (no API key). A `GEMINI_API_KEY` also works. |
+| `SITE_URL` | Optional. Public address printed on QR signs |
 | `PAYPAL_WEBHOOK_ID` | Optional. A sandbox webhook pointed at `/api/webhooks/paypal` |
 | `DEMO_GROWER_*_EMAIL` | Optional. Sandbox personal account emails that receive payouts |
 
-Without a Gemini key the app still works: customers and owners add items by hand.
+Without Gemini configured the app still works: customers and owners add items by hand. Locally, data lives in `./.data`; set `STORE_BACKEND=firestore` to use Firestore.
+
+## Hosting (Google Cloud Run, keyless)
+
+The live demo runs on Cloud Run with its own service account (`candid-run`). It holds only `roles/aiplatform.user` (Gemini on Vertex AI), `roles/datastore.user` (Firestore) and read access to one secret. There are no API keys: Gemini and Firestore authenticate as the service identity, and the PayPal sandbox secret comes from Secret Manager.
+
+```bash
+gcloud run deploy candid --source . --region us-central1 \
+  --service-account candid-run@PROJECT_ID.iam.gserviceaccount.com \
+  --min-instances 1 --max-instances 1 \
+  --set-env-vars PAYPAL_ENV=sandbox,PAYPAL_CLIENT_ID=...,GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=PROJECT_ID,GOOGLE_CLOUD_LOCATION=global,STORE_BACKEND=firestore \
+  --set-secrets PAYPAL_CLIENT_SECRET=candid-paypal-client-secret:latest
+```
+
+`--max-instances 1` is deliberate for the demo: writes to a stand are serialised in-process, and one warm instance keeps judging snappy.
 
 ## Quality checks
 
@@ -73,7 +88,7 @@ Built to WCAG 2.2 AA:
 
 ## Built with
 
-Next.js 15, React 19, TypeScript · PayPal JS SDK v6, PayPal Server SDK, Orders v2, Catalog Products, Payouts, Webhooks · Google Gemini · Three.js / React Three Fiber · AG Grid · Zod · Vitest.
+Next.js 15, React 19, TypeScript · PayPal JS SDK v6 (PayPal + Venmo), PayPal Server SDK (APIMatic), Orders v2, Catalog Products, Payouts, Webhooks · Google Gemini 3.8 Flash on Vertex AI · Google Cloud Run, Firestore, Secret Manager · Three.js / React Three Fiber · GSAP + Lenis · Remotion · AG Grid · Zod · Vitest.
 
 ## License
 
