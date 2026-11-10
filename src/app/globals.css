@@ -594,6 +594,11 @@ table.plain th.n {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
+  align-items: start;
+}
+
+.shelf-grid > .stack {
+  align-content: start;
 }
 
 .count-grid {
@@ -647,6 +652,268 @@ table.plain th.n {
   color: var(--tomato);
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+/* Setup: growers and who grows what */
+.grower-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+}
+
+@media (max-width: 560px) {
+  .grower-row {
+    grid-template-columns: 1fr auto;
+  }
+  .grower-row .field:nth-of-type(2) {
+    grid-column: 1 / 2;
+  }
+}
+
+.owner-map {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.owner-map li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.payout-preview {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--yolk-soft);
+  border: 1px solid #f3d9a4;
+}
+
+.payout-preview ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.payout-preview li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.payout-preview svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+/* Shelf counts the photo check wasn't sure about */
+.field-flagged input[type="number"] {
+  border-color: var(--yolk);
+  background: var(--yolk-soft);
+}
+
+.flag-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 0.85rem;
+  color: #7a4b00;
+}
+
+.confirm-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.confirm-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ink);
+}
+
+/* Stock log */
+.stock-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.6fr) minmax(0, 1.5fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .stock-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stock-form .field:last-of-type {
+    grid-column: 1 / -1;
+  }
+}
+
+.move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.move-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.move-sign {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  background: var(--hedge-soft);
+}
+
+.move-sign.restock {
+  background: #e3efe8;
+  color: var(--leaf);
+}
+
+.move-sign.spoiled,
+.move-sign.gift {
+  background: var(--tomato-soft);
+  color: var(--tomato);
+}
+
+.move-sign.cash {
+  background: var(--yolk-soft);
+  color: #7a4b00;
+}
+
+.link-btn {
+  font: inherit;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  padding: 8px 4px;
+  min-height: 44px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Closing the day: steps and what the check found */
+.close-steps ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.close-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.step-dot {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--hedge-soft);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.close-steps .step-done {
+  color: var(--ink);
+}
+
+.close-steps .step-done .step-dot {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.close-steps .step-current {
+  color: var(--ink);
+  border-color: var(--yolk);
+  background: var(--yolk-soft);
+}
+
+.close-steps .step-current .step-dot {
+  background: var(--yolk);
+  color: var(--ink);
+}
+
+.close-steps .step-skip {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.close-summary {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--leaf);
+  background: #eef5f0;
+}
+
+.close-summary > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--leaf);
+}
+
+.close-summary.has-gaps {
+  border-color: var(--tomato);
+  background: var(--tomato-soft);
+}
+
+.close-summary.has-gaps > svg {
+  color: var(--tomato);
+}
+
+.close-summary a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.pill.pending {
+  color: #7a4b00;
+}
+
+.pill.review {
+  color: #8a5a00;
+  border-style: dashed;
 }
 
 input[aria-invalid="true"] {

@@ -32,11 +32,11 @@
     </td>
     <td width="33%" valign="top">
       <b>For the owner</b><br />
-      Count the shelf in the morning and at closing, by photo or by hand. Candid lines that up against every captured payment and shows exactly what left unpaid.
+      Count the shelf in the morning and at closing, by photo or by hand, and log restocks or cash sales. Candid lines that up against every captured payment and keeps only the real gaps in view.
     </td>
     <td width="33%" valign="top">
       <b>For the growers</b><br />
-      When several farms share one stand, each sale is already split by whose item it was. One tap sends everyone their share through PayPal Payouts.
+      When several farms share one stand, each sale is already split by whose item it was. One tap sends everyone their share through PayPal Payouts, and Candid tracks whether each one actually arrived.
     </td>
   </tr>
 </table>
@@ -91,8 +91,8 @@ Candid is the till those stands never had. It needs nothing but a printed QR sig
 
 1. **The customer snaps their basket.** Gemini reads the photo against that stand's own price list and proposes a list of items.
 2. **They check it and pay.** The server prices the cart from the catalog, never from the phone. PayPal or Venmo takes the payment.
-3. **The owner counts the shelf twice a day.** A photo or a quick tally at opening and at closing. Candid compares what left the shelf with what was paid for.
-4. **Growers get paid.** When several farms share a stand, takings are split by whose item sold and sent in one PayPal Payouts batch.
+3. **The owner closes the day.** A photo or a quick tally at opening and at closing, plus a log of anything the counts can't see: restocks, spoiled or given-away items, cash sales. Candid compares what left the shelf with what was paid for and shows only what is still unexplained.
+4. **Growers get paid, and Candid checks it arrived.** When several farms share a stand, takings are split by whose item sold and sent in one PayPal Payouts batch. Each grower's payment is then tracked until PayPal reports it received, and one that fails or comes back is owed again.
 
 The AI only ever *proposes*. A person confirms every list before any money moves, and if the photo can't be read, the same screen works by hand.
 
@@ -110,8 +110,8 @@ Honesty stands are everywhere: in 2022, 116,617 US farms sold directly to consum
 | Customers don't carry cash | Every "I'll come back later" is a lost sale | PayPal, Venmo, and cards through PayPal. |
 | The customer has to do the maths | Mistakes and awkward rounding, usually in the stand's disfavour | One photo becomes an itemised, priced list. |
 | A QR sticker for a payment handle | Takes the money, but the owner learns nothing about what sold | Every payment is tied to items, so sales show up per product. |
-| The owner never knows what went missing | Shrinkage is a guess, so prices and stock are guesses too | Opening and closing counts against captured sales, item by item. |
-| Several growers share one table | Splitting the tin by hand at night causes friction | Payouts per grower, worked out from what actually sold. |
+| The owner never knows what went missing | Shrinkage is a guess, so prices and stock are guesses too | Opening and closing counts, restocks and removals against captured sales, item by item. |
+| Several growers share one table | Splitting the tin by hand at night causes friction | Payouts per grower, worked out from what actually sold, tracked until each one arrives. |
 
 <sub><a href="#top">Back to top</a></sub>
 
@@ -136,11 +136,11 @@ Candid has three screens, one for each person at the stand.
    /owner/new                     /s/<stand>                          /owner/<stand id>
 ```
 
-**Setting up a stand** (`/owner/new`). The owner photographs their existing price sign. Gemini reads the items, prices and units off it into a draft catalog, which the owner corrects and confirms. Candid registers every item with the PayPal Catalog Products API and prints a QR sign that points at the stand's public page.
+**Setting up a stand** (`/owner/new`). The owner photographs their existing price sign. Gemini reads the items, prices and units off it into a draft catalog, which the owner corrects and confirms. If the stand is shared, the owner adds each grower with their PayPal email and picks who grows each item, with a live preview of who gets paid for what. Candid registers every item with the PayPal Catalog Products API and prints a QR sign that points at the stand's public page.
 
 **Selling** (`/s/<stand>`). The customer opens the page from the QR code. No app and no account with Candid are needed. They photograph what they're taking and get an editable list with quantities. Anything Gemini wasn't sure about is marked so they look twice. When the list is right they pay with the PayPal or Venmo button. The receipt appears on the same screen.
 
-**Closing** (`/owner/<stand id>`). The owner records an opening count in the morning and a closing count at the end of the day, either by photo or by typing numbers. The dashboard shows today's takings, every payment in a sortable grid, the reconciliation table, and each grower's share, ready to pay out.
+**Closing** (`/owner/<stand id>`). A five-step strip walks the owner through the day: opening count, stock changes, closing count, explaining the gaps, paying the growers. Counts are by photo or by hand, and any count the photo check wasn't sure of must be confirmed before it's saved. The dashboard shows today's takings, every payment in a sortable grid, a plain-sentence summary of what the closing check found, the reconciliation table, and each grower's earned, received, on-its-way and owed amounts.
 
 <sub><a href="#top">Back to top</a></sub>
 
@@ -167,10 +167,12 @@ The live demo runs on the PayPal **sandbox**, so nothing you do there costs anyt
 
 **Step 3. Be the owner.** Open [`/owner/demo-maple-lane`](https://candid-199683411709.us-central1.run.app/owner/demo-maple-lane).
 - Your payment is already in **Today's payments**. The page refreshes itself every ten seconds.
-- Under **Shelf check**, save an opening count, then a closing count with fewer items than were paid for. The reconciliation table shows what left the shelf unpaid and what that cost.
-- Under **Pay the growers**, each grower's share of today's captured sales is shown. **Send payouts** creates one PayPal Payouts batch.
+- Under **Shelf check**, save an opening count (for example 10 jars of honey). Under **Stock changes**, log *5 restocked*. Then save a closing count of 5. Ten jars left the shelf, so unless ten were paid for, the summary names exactly how many are unexplained and what they cost.
+- Log *1 given away* or *1 sold for cash* and watch the gap shrink. Whatever nobody can explain stays visible.
+- Try a blurry or dark shelf photo: every count the photo check wasn't sure of is highlighted, and the count can't be saved until you confirm it.
+- Under **Pay the growers**, each grower's earned, received and owed amounts are shown. **Send payouts** creates one PayPal Payouts batch, then each line's status comes back from PayPal. The demo growers use addresses with no PayPal account, so you'll see *Waiting for them to claim it*: the batch went through, but the money hasn't reached anyone yet, and Candid doesn't pretend it has.
 
-**Step 4. Set up your own stand (optional).** Open [`/owner/new`](https://candid-199683411709.us-central1.run.app/owner/new), photograph any price list, edit the draft and create the stand. Then open its **QR sign** page and print it.
+**Step 4. Set up your own stand (optional).** Open [`/owner/new`](https://candid-199683411709.us-central1.run.app/owner/new), photograph any price list and edit the draft. Under **Sharing the stand?**, add a grower or two with their sandbox PayPal emails and choose who grows each item. Create the stand, then open its **QR sign** page and print it.
 
 <sub><a href="#top">Back to top</a></sub>
 
@@ -311,35 +313,44 @@ On the live demo, a basket photo with one egg carton and two jars of honey comes
 
 ## <img src="docs/readme/icons/scale.svg" width="28" height="28" alt="" /> &nbsp;Shelf reconciliation
 
-The question every honesty-stand owner wants answered is simple: *what was taken without being paid for?* Candid answers it per item, from two counts and the payments between them.
+The question every honesty-stand owner wants answered is simple: *what was taken without being paid for?* Two shelf counts can't answer that on their own, because stock also moves for reasons that aren't theft: the owner tops up the honey at lunch, a cracked carton goes in the bin, a neighbour pays in cash. So Candid keeps a small stock log beside the counts, and only what nothing explains is reported as unpaid.
 
 ```
-   MORNING                          DURING THE DAY                      EVENING
-  ┌─────────────────────┐          ┌──────────────────────────┐        ┌─────────────────────┐
-  │ opening count       │          │ customers pay            │        │ closing count       │
-  │ photo or typed      │ ───────▶ │ each sale captured by    │ ─────▶ │ photo or typed      │
-  │ eggs 12, honey 8    │          │ PayPal, with its items   │        │ eggs 7, honey 6     │
-  └─────────────────────┘          └──────────────────────────┘        └──────────┬──────────┘
-                                                                                  │
-                                                                                  ▼
-                                          left the shelf  =  opening  -  closing
-                                          taken unpaid    =  left the shelf  -  paid for
+   MORNING                 DURING THE DAY                           EVENING
+  ┌──────────────────┐    ┌────────────────────────────────┐    ┌──────────────────┐
+  │ opening count    │    │ customers pay with PayPal      │    │ closing count    │
+  │ photo or typed   │───▶│ the owner logs what counts     │───▶│ photo or typed   │
+  │ honey 10         │    │ can't see:                     │    │ honey 5          │
+  └──────────────────┘    │   + restocked        5         │    └────────┬─────────┘
+                          │   - given away       1         │             │
+                          │   $ sold for cash    1         │             ▼
+                          └────────────────────────────────┘
+
+     left the shelf  =  opening + restocked - closing             10 + 5 - 5   =  10
+     taken           =  left the shelf - spoiled - given away     10 - 1       =   9
+     unexplained     =  taken - paid with PayPal - cash reported   9 - 7 - 1   =   1
 ```
 
-A worked example for one day at the demo stand:
+A worked day at the demo stand, with seven jars of honey and four cartons of eggs paid through PayPal:
 
-| Item | Opening | Closing | Left the shelf | Paid for | Taken unpaid | Cost |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Free-range eggs | 12 | 7 | 5 | 4 | **1** | $6.00 |
-| Wildflower honey | 8 | 6 | 2 | 2 | 0 | $0.00 |
-| Sunflower bunch | 10 | 10 | 0 | 0 | 0 | $0.00 |
-| **Total** | | | **7** | **6** | **1** | **$6.00** |
+| Item | Opened | Restocked | Closed | Left shelf | PayPal | Cash | Removed | Unexplained |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wildflower honey | 10 | 5 | 5 | 10 | 7 | 1 | 1 | **1** ($9.00) |
+| Free-range eggs | 12 | | 7 | 5 | 4 | | | **1** ($6.00) |
+| Sunflower bunch | 6 | | 6 | 0 | 0 | | | 0 |
 
-The dashboard reports this as a **paid rate of 86%**, *6 of 7 items paid for*, and **$6.00 left unpaid**. The rules in `src/lib/reconcile.ts` are deliberately conservative:
+The dashboard says it in a sentence: *14 items went to customers today. 11 paid through PayPal or Venmo, 1 you reported as cash. 1 spoiled or given away. 2 items ($15.00) aren't explained by any payment or stock entry.* If the owner remembers where one went, they log it and the number drops. If they can't, it stays.
 
-- Only sales **captured** between the two counts are counted. Pending or failed orders never hide a loss.
-- Losses are never negative. Restocking during the day or a customer paying for something they then left behind doesn't create a fake surplus.
-- If nothing left the shelf, the paid rate is left blank rather than shown as a misleading 0% or 100%.
+The rules in `src/lib/reconcile.ts`:
+
+- **Restocks count.** Without the restock entry, the honey above would look like 5 jars left and 7 paid: no loss at all, which is exactly what a plain "opening minus closing" check gets wrong. Candid doesn't guess the missing entry. It flags the line for a recount, because more was paid for than left the shelf.
+- **Cash is the owner's word, not proof.** Cash sales explain a gap but are always labelled as reported, never as confirmed by PayPal.
+- **Only captured payments count.** Pending or failed orders never hide a loss.
+- **Entries logged after closing still count**, so an owner who remembers a gift after seeing the result can explain it. Entries from before the opening count belong to another day.
+- **Nothing goes negative.** A miscount or an unlogged restock shows up as *Recount*, never as a fake surplus.
+- **The paid rate is measured against what customers took**, not what was thrown away, and is left blank when customers took nothing.
+
+**Photo counts the AI wasn't sure of are never saved silently.** Gemini reports whether the photo was clear and how sure it is of each count. A dark or blurry photo, an item it couldn't find, or one it wasn't sure of is highlighted, and the count can't be saved until the owner confirms or corrects each one. A wrong count would otherwise look like theft.
 
 <sub><a href="#top">Back to top</a></sub>
 
@@ -347,10 +358,10 @@ The dashboard reports this as a **paid rate of 86%**, *6 of 7 items paid for*, a
 
 ## <img src="docs/readme/icons/split.svg" width="28" height="28" alt="" /> &nbsp;Grower payouts
 
-Many stands are shared: one farm sells eggs, a neighbour brings honey. Each item in a stand's catalog belongs to a grower, so each captured sale already knows who earned what.
+Many stands are shared: one farm sells eggs, a neighbour brings honey. During setup, the owner adds each grower with their PayPal email and picks who grows each item, with a preview of who gets paid for what. From then on every captured sale already knows who earned what.
 
 ```
-                       captured sales not yet paid out: $49.00
+                        owed right now across the stand: $49.00
                                          │
               ┌──────────────────────────┼──────────────────────────┐
               ▼                          ▼                          ▼
@@ -363,7 +374,21 @@ Many stands are shared: one farm sells eggs, a neighbour brings honey. Each item
                          one PayPal Payouts batch, one line each
 ```
 
-`growerShares` in `src/lib/reconcile.ts` skips every sale already included in an earlier batch, so pressing **Send payouts** twice never pays anyone twice. The batch, its PayPal batch id and the sales it covered are saved with the stand.
+Sending money isn't the same as the grower receiving it. PayPal can finish a batch while individual payments are still pending, waiting to be claimed by an email with no PayPal account, held, or failed. So Candid tracks each grower's line, not just the batch:
+
+```
+   owed now  =  earned from captured sales  -  received  -  on its way
+       │
+       │   Send payouts: one batch, one line per grower, each with its own sender item id
+       ▼
+   Candid asks PayPal for each line's status (on load, and every 15 seconds while any are moving)
+       │
+       ├──▶  SUCCESS                              received
+       ├──▶  PENDING, UNCLAIMED, ONHOLD           on its way, so it is never sent twice
+       └──▶  FAILED, RETURNED, BLOCKED, DENIED    owed again, and included in the next payout
+```
+
+The owner sees a table per grower: earned, received, on its way, owed now, and the last payout's status in words (*Received*, *On its way*, *Waiting for them to claim it*, *Failed, owed again*). Settlement in `src/lib/settlement.ts` works from amounts rather than sale lists, so a failed payout simply becomes owed again, and pressing **Send payouts** twice can never pay anyone twice.
 
 <sub><a href="#top">Back to top</a></sub>
 
@@ -378,6 +403,7 @@ A payments app for unattended stands has to be harder to fool than a cash tin. T
 | Sandbox only | The PayPal API base is fixed to the sandbox host, and the server refuses to start a payment if any PayPal setting mentions a live host | `src/lib/env.ts` |
 | Prices come from the server | Carts carry item ids and quantities only. Unknown items and bad quantities are refused | `src/lib/pricing.ts` |
 | Paid means PayPal said so | A sale becomes paid only on `COMPLETED` for exactly the priced amount | `src/lib/paypal.ts`, `src/lib/sales.ts` |
+| Received means PayPal said so | A grower's payout counts as received only on `SUCCESS` for their own line. Failed or returned money is owed again | `src/lib/settlement.ts` |
 | No double charges | One stable `PayPal-Request-Id` per sale, so retries return the same capture | `src/lib/sales.ts` |
 | No capture without approval | The order status is checked before every capture | `src/lib/sales.ts` |
 | Webhooks are verified | PayPal's verify-signature API must accept the event. Only PayPal certificate URLs are allowed. Duplicates are no-ops | `src/app/api/webhooks/paypal/route.ts` |
@@ -449,7 +475,8 @@ candid/
 │   │   ├── pricing.ts                prices a cart from the catalog
 │   │   ├── paypal.ts                 Server SDK orders, REST for catalog, payouts, webhooks
 │   │   ├── sales.ts                  capture rules and webhook application
-│   │   ├── reconcile.ts              shelf reconciliation and grower shares
+│   │   ├── reconcile.ts              shelf counts, stock log and payments, item by item
+│   │   ├── settlement.ts             what each grower earned, received and is owed
 │   │   ├── ai.ts                     Gemini prompts, schemas and clean-up
 │   │   ├── store.ts                  Firestore, Redis or local files, one writer per stand
 │   │   ├── env.ts                    sandbox guard and configuration
@@ -459,7 +486,9 @@ candid/
 │   ├── components/
 │   │   ├── StandCheckout.tsx         photo, list, pay, receipt
 │   │   ├── PayPalCheckout.tsx        JS SDK v6 PayPal and Venmo buttons
-│   │   ├── OwnerDashboard.tsx        takings, shelf checks, payouts
+│   │   ├── OwnerDashboard.tsx        closing steps, reconciliation, grower settlement
+│   │   ├── ShelfCheck.tsx            photo counts, with unsure counts held for review
+│   │   ├── StockLog.tsx              restocks, removals and cash sales
 │   │   ├── SalesGrid.tsx             AG Grid payments table
 │   │   ├── story/                    landing page: scenes, chapters, preloader
 │   │   ├── three/                    3D models and the live phone screen
@@ -491,8 +520,11 @@ All routes are under `/api`. Request bodies are JSON and validated with Zod. Eve
 | `POST` | `/orders/:orderId/capture` | Checks status, then captures once. `409` if the buyer didn't approve | Anyone |
 | `POST` | `/stands/:id/shelf-photo` | Counts a shelf photo | Owner, 20 per 10 min |
 | `POST` | `/stands/:id/shelf` | Saves an opening or closing count | Owner |
-| `GET` | `/stands/:id/summary` | Today's takings, sales, reconciliation and grower shares | Owner |
-| `POST` | `/stands/:id/payouts` | Sends one Payouts batch for unpaid grower shares | Owner |
+| `POST` | `/stands/:id/stock` | Logs a restock, a spoiled or given-away item, or a cash sale | Owner |
+| `DELETE` | `/stands/:id/stock?entry=` | Removes a stock entry logged by mistake | Owner |
+| `GET` | `/stands/:id/summary` | Today's takings, sales, stock log, reconciliation and grower settlement | Owner |
+| `POST` | `/stands/:id/payouts` | Sends one Payouts batch for what each grower is owed | Owner |
+| `POST` | `/stands/:id/payouts/status` | Reads each grower's payout status back from PayPal | Owner |
 | `POST` | `/webhooks/paypal` | Applies verified PayPal capture events | PayPal, signature verified |
 
 <sub><a href="#top">Back to top</a></sub>
@@ -581,7 +613,7 @@ The `Dockerfile` builds Next.js in standalone mode on Node 22 and runs it as a n
 ## <img src="docs/readme/icons/check.svg" width="28" height="28" alt="" /> &nbsp;Tests and quality
 
 ```bash
-npm test            # 26 unit tests (Vitest)
+npm test            # 35 unit tests (Vitest)
 npm run typecheck   # TypeScript, strict
 npm run lint        # ESLint
 npm run build       # production build
@@ -594,8 +626,10 @@ The tests cover the rules that protect money, not the framework:
 | Money and pricing | Cents and PayPal decimals round-trip exactly. Prices come from the catalog, never the client. Duplicate lines merge. Unknown items and bad quantities are refused. |
 | Capture | A sale is paid only after PayPal confirms. PayPal is never called twice for a captured sale. Retries reuse the request id. A cancelled popup is neither captured nor flagged. A capture whose reply was lost is recovered. |
 | Webhooks | Matching captures are confirmed. A second delivery changes nothing. A different amount is flagged, not trusted. |
-| Reconciliation | Unpaid items are found. Uncaptured and out-of-hours sales are ignored. Losses are never negative. An empty day has no paid rate. |
-| Payouts and AI clean-up | Shares are split by grower and never include a sale twice. Unknown ids are dropped, duplicates merged and counts clamped. |
+| Reconciliation | Unpaid items are found. Restocks reveal a gap that opening minus closing would hide. Removals and cash explain a gap; the rest stays unexplained. Entries before opening are ignored, entries after closing count. Uncaptured and out-of-hours sales are ignored. Nothing goes negative, and counts that don't add up are flagged. |
+| Grower settlement | Sales are split by grower. Money received or on its way is never sent twice. Failed or returned payouts become owed again. Older records without per-line status are treated as on their way. |
+| Payout status | PayPal's per-recipient status is matched to the right grower by sender item id. Only batches that can still change are checked, and not more than every 15 seconds. |
+| AI clean-up | Unknown ids are dropped, duplicates merged and counts clamped. |
 | Sandbox guard | Only the sandbox host is ever used. Live mode, or any live host in any setting, is refused. |
 
 Beyond the unit tests, the full loop was run against the real PayPal sandbox and Vertex AI: order creation, approval, capture, a repeated capture returning the same capture id, basket and shelf photos read correctly, and Firestore reads and writes on the deployed service.
@@ -609,7 +643,8 @@ Beyond the unit tests, the full loop was run against the real PayPal sandbox and
 Being honest about what a hackathon build doesn't do yet:
 
 - **One server instance.** Writes are serialised in-process, which is why the demo runs exactly one instance. Firestore transactions would lift that limit.
-- **Photo counting has limits.** Gemini counts a tidy shelf well. Deep stacks and items hidden behind others are where it struggles, which is why every count is editable before it's saved.
+- **Photo counting has limits.** Gemini counts a tidy shelf well. Deep stacks and items hidden behind others are where it struggles, which is why unsure counts must be confirmed and every count is editable before it's saved. Two similar-looking items from different growers (two kinds of honey, say) need distinct `lookFor` notes, or revenue could be credited to the wrong grower.
+- **Growers are set at setup.** Adding a grower or changing a PayPal email after the stand is created isn't in the UI yet.
 - **Refunds.** The webhook is subscribed to refunds and denials, but only completed captures change a sale today. Refund handling on the dashboard is next.
 - **Sandbox only, by design.** Going live would need PayPal onboarding for each stand owner, so their money goes straight to their own account.
 

@@ -6,11 +6,15 @@ import { api, ApiError, photoToJpeg } from "@/lib/client";
 import { Icon } from "./Icon";
 import { PhotoButton } from "./PhotoButton";
 
-type Draft = { key: string; name: string; price: string; unit: string; lookFor: string };
+type Draft = { key: string; name: string; price: string; unit: string; lookFor: string; growerId: string };
+type GrowerDraft = { id: string; name: string; email: string };
 type Status = { message: string; tone: "info" | "error" | "success" } | null;
 
 let nextKey = 0;
-const blank = (): Draft => ({ key: `row-${nextKey++}`, name: "", price: "", unit: "each", lookFor: "" });
+let nextGrower = 1;
+const blank = (): Draft => ({ key: `row-${nextKey++}`, name: "", price: "", unit: "each", lookFor: "", growerId: "" });
+const blankGrower = (): GrowerDraft => ({ id: `g-${nextGrower++}`, name: "", email: "" });
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function priceToCents(input: string): number | null {
   const cleaned = input.trim().replace(/^\$/, "");
@@ -25,6 +29,7 @@ export function SetupWizard() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [rows, setRows] = useState<Draft[]>([blank()]);
+  const [growers, setGrowers] = useState<GrowerDraft[]>([]);
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<Status>(null);
@@ -41,7 +46,14 @@ export function SetupWizard() {
         return;
       }
       setRows(
-        items.map((item) => ({ key: `row-${nextKey++}`, name: item.name, price: (item.priceCents / 100).toFixed(2), unit: item.unit || "each", lookFor: item.lookFor })),
+        items.map((item) => ({
+          key: `row-${nextKey++}`,
+          name: item.name,
+          price: (item.priceCents / 100).toFixed(2),
+          unit: item.unit || "each",
+          lookFor: item.lookFor,
+          growerId: "",
+        })),
       );
       setStatus({ message: `Found ${items.length} item${items.length === 1 ? "" : "s"}. Check names and prices before saving.`, tone: "success" });
     } catch (error) {
@@ -55,6 +67,19 @@ export function SetupWizard() {
     setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   }
 
+  function updateGrower(id: string, patch: Partial<GrowerDraft>) {
+    setGrowers((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
+  }
+
+  function removeGrower(id: string) {
+    setGrowers((prev) => prev.filter((g) => g.id !== id));
+    // Their items go back to the owner rather than pointing at nobody.
+    setRows((prev) => prev.map((row) => (row.growerId === id ? { ...row, growerId: "" } : row)));
+  }
+
+  const namedRows = rows.filter((row) => row.name.trim());
+  const growerLabel = (g: GrowerDraft, index: number) => g.name.trim() || `Grower ${index + 1}`;
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
@@ -65,9 +90,23 @@ export function SetupWizard() {
         const priceCents = priceToCents(row.price);
         if (!row.name.trim()) nextErrors[`${row.key}-name`] = "Add a name.";
         if (priceCents === null || priceCents === 0) nextErrors[`${row.key}-price`] = "Use a price like 6 or 4.50.";
-        return { name: row.name.trim(), priceCents: priceCents ?? 0, unit: row.unit.trim() || "each", lookFor: row.lookFor.trim(), growerId: null };
+        return {
+          name: row.name.trim(),
+          priceCents: priceCents ?? 0,
+          unit: row.unit.trim() || "each",
+          lookFor: row.lookFor.trim(),
+          growerId: row.growerId || null,
+        };
       });
     if (items.length === 0) nextErrors.items = "Add at least one item.";
+    const seenEmails = new Set<string>();
+    for (const grower of growers) {
+      if (!grower.name.trim()) nextErrors[`${grower.id}-name`] = "Add the grower's name.";
+      const email = grower.email.trim().toLowerCase();
+      if (!EMAIL.test(email)) nextErrors[`${grower.id}-email`] = "Use the email of their PayPal account.";
+      else if (seenEmails.has(email)) nextErrors[`${grower.id}-email`] = "Another grower already uses this email.";
+      seenEmails.add(email);
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
       setStatus({ message: "A few things need fixing before we can save.", tone: "error" });
@@ -79,7 +118,12 @@ export function SetupWizard() {
     setSaving(true);
     try {
       const { id, catalogSynced } = await api<{ id: string; catalogSynced: boolean }>("/api/stands", {
-        body: { name: name.trim(), location: location.trim(), items, growers: [] },
+        body: {
+          name: name.trim(),
+          location: location.trim(),
+          items,
+          growers: growers.map((g) => ({ id: g.id, name: g.name.trim(), paypalEmail: g.email.trim() })),
+        },
       });
       if (!catalogSynced) setStatus({ message: "Stand saved. PayPal catalog sync will retry later.", tone: "info" });
       router.push(`/owner/${id}`);
@@ -152,8 +196,104 @@ export function SetupWizard() {
         </div>
       </section>
 
+      <section className="card stack" aria-labelledby="growers-heading">
+        <h2 id="growers-heading">3. Sharing the stand? (optional)</h2>
+        <p className="muted">
+          If neighbours sell their produce here too, add them. Candid pays each grower for their own items through PayPal Payouts. Items you
+          grow yourself stay in your PayPal balance.
+        </p>
+        {growers.map((grower, index) => (
+          <fieldset key={grower.id} className="item-row grower-row">
+            <legend className="sr-only">{growerLabel(grower, index)}</legend>
+            <div className="field">
+              <label htmlFor={`f-${grower.id}-name`}>Grower</label>
+              <input
+                id={`f-${grower.id}-name`}
+                type="text"
+                value={grower.name}
+                maxLength={60}
+                autoComplete="off"
+                onChange={(e) => updateGrower(grower.id, { name: e.target.value })}
+                aria-invalid={Boolean(errors[`${grower.id}-name`]) || undefined}
+                aria-describedby={describedBy(`${grower.id}-name`)}
+              />
+              {errors[`${grower.id}-name`] ? <p id={`e-${grower.id}-name`} className="field-error">{errors[`${grower.id}-name`]}</p> : null}
+            </div>
+            <div className="field">
+              <label htmlFor={`f-${grower.id}-email`}>PayPal email (sandbox)</label>
+              <input
+                id={`f-${grower.id}-email`}
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                value={grower.email}
+                maxLength={254}
+                onChange={(e) => updateGrower(grower.id, { email: e.target.value })}
+                aria-invalid={Boolean(errors[`${grower.id}-email`]) || undefined}
+                aria-describedby={describedBy(`${grower.id}-email`)}
+              />
+              {errors[`${grower.id}-email`] ? <p id={`e-${grower.id}-email`} className="field-error">{errors[`${grower.id}-email`]}</p> : null}
+            </div>
+            <button type="button" className="icon-btn" onClick={() => removeGrower(grower.id)} aria-label={`Remove ${growerLabel(grower, index)}`}>
+              <Icon name="close" size={18} />
+            </button>
+          </fieldset>
+        ))}
+        <div className="row">
+          <button type="button" className="btn secondary small" onClick={() => setGrowers((prev) => (prev.length < 10 ? [...prev, blankGrower()] : prev))}>
+            <Icon name="plus" size={16} /> Add a grower
+          </button>
+        </div>
+
+        {growers.length && namedRows.length ? (
+          <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
+            <h3 className="eyebrow">Who grows what</h3>
+            <ul className="owner-map" role="list">
+              {namedRows.map((row) => (
+                <li key={row.key}>
+                  <label htmlFor={`f-${row.key}-grower`}>{row.name.trim()}</label>
+                  <select id={`f-${row.key}-grower`} value={row.growerId} onChange={(e) => update(row.key, { growerId: e.target.value })}>
+                    <option value="">You (the stand owner)</option>
+                    {growers.map((g, index) => (
+                      <option key={g.id} value={g.id}>
+                        {growerLabel(g, index)}
+                      </option>
+                    ))}
+                  </select>
+                </li>
+              ))}
+            </ul>
+            <div className="payout-preview" aria-live="polite">
+              <p className="eyebrow">Who gets paid for what</p>
+              <ul role="list">
+                {growers.map((g, index) => {
+                  const theirs = namedRows.filter((row) => row.growerId === g.id).map((row) => row.name.trim());
+                  return (
+                    <li key={g.id}>
+                      <Icon name="split" size={16} />
+                      <span>
+                        <b>{growerLabel(g, index)}</b> {theirs.length ? `is paid for ${theirs.join(", ")}` : "has no items yet"}
+                      </span>
+                    </li>
+                  );
+                })}
+                <li>
+                  <Icon name="receipt" size={16} />
+                  <span>
+                    <b>You</b>{" "}
+                    {namedRows.some((row) => !row.growerId)
+                      ? `keep ${namedRows.filter((row) => !row.growerId).map((row) => row.name.trim()).join(", ")}`
+                      : "keep nothing: every item belongs to a grower"}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
       <section className="card stack" aria-labelledby="stand-heading">
-        <h2 id="stand-heading">3. Name your stand</h2>
+        <h2 id="stand-heading">4. Name your stand</h2>
         <div className="field">
           <label htmlFor="f-name">Stand name</label>
           <input

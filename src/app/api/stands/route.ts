@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         growerId: item.growerId && growerIds.has(item.growerId) ? item.growerId : null,
       })),
     };
-    await createStandRecord({ stand, sales: [], shelfCounts: [], payouts: [] });
+    await createStandRecord({ stand, sales: [], shelfCounts: [], payouts: [], stockMoves: [] });
 
     (await cookies()).set(ownerCookieName(id), ownerKey, {
       httpOnly: true,

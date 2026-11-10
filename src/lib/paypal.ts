@@ -12,6 +12,7 @@ import {
 } from "@paypal/paypal-server-sdk";
 import { centsToValue, valueToCents } from "./money";
 import { PAYPAL_API_BASE, paypalCredentials } from "./env";
+import { senderItemId, type PayPalBatchView } from "./settlement";
 import type { Item, Sale, Stand } from "./types";
 
 /**
@@ -235,13 +236,18 @@ export async function sendGrowerPayouts(
       items: shares.map((share) => ({
         recipient_type: "EMAIL",
         receiver: share.email,
-        sender_item_id: `${batchKey}-${share.growerId}`.slice(0, 63),
+        sender_item_id: senderItemId(batchKey, share.growerId),
         amount: { value: centsToValue(share.cents), currency: "USD" },
         note: `Honesty-stand sales from ${standName}`,
       })),
     },
   });
   return { batchId: result.batch_header.payout_batch_id, status: result.batch_header.batch_status };
+}
+
+/** Reads a payout batch with each recipient's own status (pending, success, unclaimed, failed...). */
+export async function getPayoutBatch(batchId: string): Promise<PayPalBatchView> {
+  return paypalRest<PayPalBatchView>(`/v1/payments/payouts/${encodeURIComponent(batchId)}?page_size=100`, { method: "GET" });
 }
 
 /** Verifies a webhook with PayPal before we trust anything in its body. */

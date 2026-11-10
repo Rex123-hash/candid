@@ -65,14 +65,62 @@ export type ShelfCount = {
   createdAt: string;
 };
 
+/**
+ * Why stock changed other than a customer taking it. Restocks add to the shelf;
+ * spoiled and given-away items leave it without being sold; cash is a sale the
+ * owner reports but PayPal can't confirm.
+ */
+export const STOCK_REASONS = ["restock", "spoiled", "gift", "cash"] as const;
+export type StockReason = (typeof STOCK_REASONS)[number];
+
+export type StockMove = {
+  id: string;
+  standId: string;
+  itemId: string;
+  qty: number;
+  reason: StockReason;
+  createdAt: string;
+};
+
+/** PayPal's per-recipient payout states. Anything else is kept as UNKNOWN. */
+export const PAYOUT_ITEM_STATUSES = [
+  "PENDING",
+  "SUCCESS",
+  "UNCLAIMED",
+  "ONHOLD",
+  "FAILED",
+  "RETURNED",
+  "BLOCKED",
+  "REFUNDED",
+  "REVERSED",
+  "DENIED",
+  "UNKNOWN",
+] as const;
+export type PayoutItemStatus = (typeof PAYOUT_ITEM_STATUSES)[number];
+
+export type PayoutLine = {
+  growerId: string;
+  name: string;
+  email: string;
+  cents: number;
+  /** Our id for this line inside the batch, used to match PayPal's per-item status. */
+  senderItemId?: string;
+  payoutItemId?: string;
+  /** Missing on records made before per-recipient tracking: treated as still in flight. */
+  status?: PayoutItemStatus;
+  error?: string;
+};
+
 export type PayoutRecord = {
   id: string;
   standId: string;
   batchId: string;
   status: string;
-  lines: { growerId: string; name: string; email: string; cents: number }[];
-  saleIds: string[];
+  lines: PayoutLine[];
+  /** Legacy: sales covered by the batch. Settlement now works from amounts. */
+  saleIds?: string[];
   createdAt: string;
+  checkedAt?: string;
 };
 
 export type StandRecord = {
@@ -80,6 +128,8 @@ export type StandRecord = {
   sales: Sale[];
   shelfCounts: ShelfCount[];
   payouts: PayoutRecord[];
+  /** Missing on records saved before stock logging existed. */
+  stockMoves?: StockMove[];
 };
 
 // Request schemas: everything that crosses the network boundary is validated here.
@@ -108,16 +158,35 @@ export const DraftItemSchema = z.object({
   growerId: z.string().max(64).nullable(),
 });
 
-export const CreateStandSchema = z.object({
-  name: z.string().trim().min(2).max(60),
-  location: z.string().trim().max(80),
-  items: z.array(DraftItemSchema).min(1).max(30),
-  growers: z
-    .array(z.object({ id: z.string().max(64), name: z.string().trim().min(1).max(60), paypalEmail: z.email() }))
-    .max(10),
+export const GrowerDraftSchema = z.object({
+  id: z.string().regex(/^g-[a-z0-9-]{1,40}$/),
+  name: z.string().trim().min(1).max(60),
+  paypalEmail: z.email().max(254),
 });
+
+export const CreateStandSchema = z
+  .object({
+    name: z.string().trim().min(2).max(60),
+    location: z.string().trim().max(80),
+    items: z.array(DraftItemSchema).min(1).max(30),
+    growers: z.array(GrowerDraftSchema).max(10),
+  })
+  .refine((s) => new Set(s.growers.map((g) => g.id)).size === s.growers.length, {
+    message: "Each grower needs their own id.",
+    path: ["growers"],
+  })
+  .refine((s) => new Set(s.growers.map((g) => g.paypalEmail.toLowerCase())).size === s.growers.length, {
+    message: "Two growers can't share one PayPal email.",
+    path: ["growers"],
+  });
 
 export const ShelfCountSchema = z.object({
   kind: z.enum(["open", "close"]),
   counts: z.record(z.string().max(64), z.number().int().min(0).max(10_000)),
+});
+
+export const StockMoveSchema = z.object({
+  itemId: z.string().min(1).max(64),
+  qty: z.number().int().min(1).max(1_000),
+  reason: z.enum(STOCK_REASONS),
 });
