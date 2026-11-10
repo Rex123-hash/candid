@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { Firestore } from "@google-cloud/firestore";
 import { Redis } from "@upstash/redis";
 import type { StandRecord } from "./types";
 import { demoStandRecord, DEMO_STAND_ID } from "./demo";
@@ -50,7 +51,26 @@ function redisBackend(): Backend | null {
   };
 }
 
-const backend: Backend = redisBackend() ?? fileBackend;
+/**
+ * Firestore in the same Google Cloud project. On Cloud Run it authenticates as the
+ * service's own identity, so there are no keys. One document per key.
+ */
+function firestoreBackend(): Backend | null {
+  if (process.env.STORE_BACKEND !== "firestore") return null;
+  const db = new Firestore({ ignoreUndefinedProperties: true });
+  const collection = db.collection(process.env.FIRESTORE_COLLECTION ?? "candid");
+  return {
+    async get(key) {
+      const snap = await collection.doc(safeKey(key)).get();
+      return snap.exists ? ((snap.get("value") as string | undefined) ?? null) : null;
+    },
+    async set(key, value) {
+      await collection.doc(safeKey(key)).set({ value, updatedAt: new Date().toISOString() });
+    },
+  };
+}
+
+const backend: Backend = firestoreBackend() ?? redisBackend() ?? fileBackend;
 
 function safeKey(key: string): string {
   if (!/^[a-z0-9:_-]{1,100}$/i.test(key)) throw new Error("Invalid storage key");
