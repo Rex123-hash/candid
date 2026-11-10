@@ -205,9 +205,21 @@ img {
 }
 
 .btn.small {
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 14px;
   font-size: 0.95rem;
+}
+
+.btn.quiet {
+  background: transparent;
+  color: var(--muted);
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn.quiet:hover {
+  color: var(--ink);
 }
 
 .icon-btn {
@@ -905,6 +917,98 @@ table.plain th.n {
 .close-summary a {
   color: inherit;
   font-weight: 700;
+}
+
+/* Closing questions: one card per gap */
+.questions {
+  padding: 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+}
+
+.questions-head h3 {
+  font-size: 1.25rem;
+}
+
+.question-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.question-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--tomato-soft);
+  border: 1px solid #f2c2b6;
+}
+
+.question-card.review {
+  background: var(--yolk-soft);
+  border-color: #f3d9a4;
+}
+
+.question-title {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+}
+
+.question-title svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--tomato);
+}
+
+.question-card.review .question-title svg {
+  color: #8a5a00;
+}
+
+.question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.question-actions .btn.secondary {
+  background: var(--card);
+}
+
+.qty-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  margin-right: 4px;
+  border-right: 1px solid var(--line);
+}
+
+.qty-pick .num {
+  min-width: 4.5em;
+  text-align: center;
+  font-weight: 700;
+}
+
+.noted-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.noted-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .pill.pending {

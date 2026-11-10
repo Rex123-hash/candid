@@ -132,11 +132,11 @@ function CountScene() {
   const bars = [
     { label: "Left the shelf", value: 19, color: C.cream },
     { label: "Paid", value: 17, color: C.amber },
-    { label: "Unpaid", value: 2, color: C.red },
+    { label: "To ask about", value: 2, color: C.red },
   ];
   return (
     <AbsoluteFill>
-      <Caption step="Step 3 · Close" title="Know what went missing." />
+      <Caption step="Step 3 · Close" title="Only the gaps need answers." />
       <div style={{ position: "absolute", left: 80, right: 80, top: 260, display: "grid", gap: 34 }}>
         {bars.map((bar, i) => {
           const t = interpolate(frame, [10 + i * 8, 40 + i * 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });

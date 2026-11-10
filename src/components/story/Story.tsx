@@ -200,8 +200,8 @@ export function Story() {
                       <dd className="num">17</dd>
                     </div>
                     <div className="unpaid">
-                      <dt>Unpaid honey</dt>
-                      <dd className="num">2 · $18</dd>
+                      <dt>To ask about</dt>
+                      <dd className="num">2 honey · $18</dd>
                     </div>
                   </dl>
                 ) : null}

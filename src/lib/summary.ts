@@ -1,4 +1,4 @@
-import { reconcile, type Reconciliation } from "./reconcile";
+import { closingQuestions, reconcile, type ClosingQuestion, type Reconciliation } from "./reconcile";
 import { settle, type GrowerSettlement, type GrowerShare } from "./settlement";
 import type { PayoutRecord, Sale, ShelfCount, StandRecord, StockMove } from "./types";
 
@@ -11,6 +11,8 @@ export type StandSummary = {
   /** The owner's stock log since the opening count. */
   moves: StockMove[];
   reconciliation: Reconciliation | null;
+  /** The gaps the owner still has to answer for, one question each. */
+  questions: ClosingQuestion[];
   /** What each grower is owed right now: the next payout. */
   shares: GrowerShare[];
   settlements: GrowerSettlement[];
@@ -32,6 +34,7 @@ export function summarise(record: StandRecord): StandSummary {
     ? (record.stockMoves ?? []).filter((m) => Date.parse(m.createdAt) >= since).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     : [];
   const { settlements, shares } = settle(record.stand, record.sales, record.payouts);
+  const reconciliation = open && close ? reconcile(record.stand, open, close, record.sales, moves) : null;
 
   return {
     sales,
@@ -40,7 +43,8 @@ export function summarise(record: StandRecord): StandSummary {
     open,
     close,
     moves,
-    reconciliation: open && close ? reconcile(record.stand, open, close, record.sales, moves) : null,
+    reconciliation,
+    questions: reconciliation && close ? closingQuestions(record.stand, reconciliation, close.id, record.acknowledged) : [],
     shares,
     settlements,
     payouts: [...record.payouts].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),

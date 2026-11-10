@@ -123,6 +123,18 @@ export type PayoutRecord = {
   checkedAt?: string;
 };
 
+/** What kind of gap the closing check found on one item. */
+export const EXCEPTION_KINDS = ["unexplained", "over", "surplus"] as const;
+export type ExceptionKind = (typeof EXCEPTION_KINDS)[number];
+
+/** The owner's answer "I don't know" to one closing question: noted, not explained away. */
+export type Acknowledgement = {
+  closeId: string;
+  itemId: string;
+  kind: ExceptionKind;
+  createdAt: string;
+};
+
 export type StandRecord = {
   stand: Stand;
   sales: Sale[];
@@ -130,6 +142,8 @@ export type StandRecord = {
   payouts: PayoutRecord[];
   /** Missing on records saved before stock logging existed. */
   stockMoves?: StockMove[];
+  /** Missing on records saved before closing questions existed. */
+  acknowledged?: Acknowledgement[];
 };
 
 // Request schemas: everything that crosses the network boundary is validated here.
@@ -183,6 +197,12 @@ export const CreateStandSchema = z
 export const ShelfCountSchema = z.object({
   kind: z.enum(["open", "close"]),
   counts: z.record(z.string().max(64), z.number().int().min(0).max(10_000)),
+});
+
+export const AcknowledgeSchema = z.object({
+  closeId: z.string().min(1).max(64),
+  itemId: z.string().min(1).max(64),
+  kind: z.enum(EXCEPTION_KINDS),
 });
 
 export const StockMoveSchema = z.object({

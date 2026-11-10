@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sanitiseCounts } from "@/lib/ai";
 import { demoStandRecord } from "@/lib/demo";
-import { reconcile } from "@/lib/reconcile";
+import { closingQuestions, reconcile } from "@/lib/reconcile";
 import { applyPayoutStatus, needsStatusCheck, senderItemId, settle } from "@/lib/settlement";
 import type { PayoutItemStatus, PayoutLine, PayoutRecord, Sale, ShelfCount, StockMove } from "@/lib/types";
 
@@ -94,6 +94,40 @@ describe("reconcile with the stock log", () => {
     const r = reconcile(stand, o, c, eight, [move("restock", 5), move("spoiled", 2)]);
     expect(r.takenTotal).toBe(8);
     expect(r.paidRate).toBe(1);
+  });
+});
+
+describe("closingQuestions", () => {
+  const o = count("open", "2026-11-12T08:00:00.000Z", { honey: 10, eggs: 12, tomatoes: 4 });
+  const c = { ...count("close", "2026-11-12T18:00:00.000Z", { honey: 5, eggs: 7, tomatoes: 6 }), id: "close-1" };
+  const paid = [sale("h", "2026-11-12T12:00:00.000Z", [["honey", 7], ["eggs", 5]])];
+
+  it("asks one question per gap, money first, and nothing about lines that add up", () => {
+    const r = reconcile(stand, o, c, paid, [move("restock", 5)]);
+    const qs = closingQuestions(stand, r, c.id);
+    expect(qs.map((q) => [q.itemId, q.kind, q.qty, q.cents])).toEqual([
+      ["honey", "unexplained", 3, 2700],
+      ["tomatoes", "surplus", 2, 0],
+    ]);
+  });
+
+  it("asks about over-accounted items instead of hiding them", () => {
+    const r = reconcile(stand, o, c, paid, []);
+    expect(closingQuestions(stand, r, c.id).find((q) => q.itemId === "honey")).toMatchObject({ kind: "over", qty: 2 });
+  });
+
+  it("keeps an 'I don't know' answer on record without explaining the gap away", () => {
+    const r = reconcile(stand, o, c, paid, [move("restock", 5)]);
+    const acks = [
+      { closeId: c.id, itemId: "honey", kind: "unexplained" as const, createdAt: "2026-11-12T18:05:00.000Z" },
+      { closeId: "an-older-close", itemId: "tomatoes", kind: "surplus" as const, createdAt: "2026-11-11T18:05:00.000Z" },
+    ];
+    const qs = closingQuestions(stand, r, c.id, acks);
+    expect(qs.map((q) => [q.itemId, q.acknowledged])).toEqual([
+      ["tomatoes", false],
+      ["honey", true],
+    ]);
+    expect(r.unpaidTotal).toBe(3);
   });
 });
 

@@ -7,6 +7,7 @@ import type { GrowerSettlement } from "@/lib/settlement";
 import type { StandSummary } from "@/lib/summary";
 import type { PayoutItemStatus } from "@/lib/types";
 import { Icon } from "./Icon";
+import { ClosingQuestions } from "./ClosingQuestions";
 import { LocalTime } from "./LocalTime";
 import { SalesGrid } from "./SalesGrid";
 import { ShelfCheck } from "./ShelfCheck";
@@ -89,17 +90,18 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
   }
 
   const gaps = r ? r.unpaidTotal > 0 || r.needsReview.length > 0 : false;
+  const openQuestions = summary.questions.filter((q) => !q.acknowledged).length;
   const steps: { label: string; state: StepState }[] = [
     { label: "Opening count", state: summary.open ? "done" : "current" },
     { label: "Log stock changes", state: !summary.open ? "todo" : summary.moves.length ? "done" : summary.close ? "skip" : "current" },
     { label: "Closing count", state: summary.close ? "done" : summary.open ? "current" : "todo" },
-    { label: "Explain the gaps", state: !r ? "todo" : gaps ? "current" : "done" },
+    { label: openQuestions ? `Answer ${openQuestions} question${openQuestions === 1 ? "" : "s"}` : "Answer the questions", state: !r ? "todo" : openQuestions ? "current" : "done" },
     {
       label: "Pay the growers",
       state: !growers.length
         ? "skip"
         : summary.shares.length
-          ? r && !gaps
+          ? r && !openQuestions
             ? "current"
             : "todo"
           : summary.settlements.some((s) => s.inFlightCents > 0)
@@ -166,7 +168,7 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
             <ShelfCheck standId={stand.id} items={stand.items} kind="open" onStatus={notify} onSaved={onSaved} />
           </div>
           <div className="stack">
-            <h3>Closing</h3>
+            <h3 id="closing-heading">Closing</h3>
             <p className="hint">{summary.close ? <>Counted at <LocalTime iso={summary.close.createdAt} /></> : "Not counted yet"}</p>
             {summary.open ? (
               <ShelfCheck standId={stand.id} items={stand.items} kind="close" onStatus={notify} onSaved={onSaved} />
@@ -196,24 +198,24 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
                 </p>
                 {r.unpaidTotal ? (
                   <p>
-                    {r.unpaidTotal} item{r.unpaidTotal === 1 ? "" : "s"} ({formatCents(r.unpaidCents)}) aren&rsquo;t explained by any payment or stock entry:{" "}
-                    {r.lines
-                      .filter((l) => l.unpaid)
-                      .map((l) => `${l.unpaid} ${l.name.toLowerCase()}`)
-                      .join(", ")}
-                    . If you know where they went, <a href="#stock-log">log it</a>. Whatever stays unexplained is counted as taken unpaid.
+                    {r.unpaidTotal} item{r.unpaidTotal === 1 ? "" : "s"} ({formatCents(r.unpaidCents)}) aren&rsquo;t explained by any payment or stock entry.
+                    Whatever stays unexplained is counted as taken unpaid.
                   </p>
                 ) : (
                   <p>Every item that left the shelf is accounted for.</p>
                 )}
                 {r.needsReview.length ? (
                   <p>
-                    Recount {r.needsReview.map((id) => nameOf(id).toLowerCase()).join(" and ")}: the numbers don&rsquo;t add up. Usually that&rsquo;s a restock that
-                    wasn&rsquo;t logged, or a miscount.
+                    The numbers for {r.needsReview.map((id) => nameOf(id).toLowerCase()).join(" and ")} don&rsquo;t add up, usually a restock that wasn&rsquo;t logged
+                    or a miscount.
                   </p>
                 ) : null}
               </div>
             </div>
+
+            {summary.close ? (
+              <ClosingQuestions standId={stand.id} closeId={summary.close.id} questions={summary.questions} onSaved={onSaved} onStatus={notify} />
+            ) : null}
 
             <div className="table-scroll">
               <table className="plain">

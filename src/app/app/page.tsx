@@ -20,9 +20,9 @@ const DOORS: { href: string; icon: IconName; kicker: string; title: string; body
     href: "/owner/demo-maple-lane",
     icon: "scan",
     kicker: "Be the owner",
-    title: "Closing check & payouts",
+    title: "Close a shared stand",
     body: "It's the end of the day at Maple Lane. Three neighbours share the stand, and the money has to reach each of them.",
-    sees: ["Count the shelf from a photo; unclear counts are flagged for you", "Log restocks, removals and cash so only real gaps stay unexplained", "Pay each grower and watch whether PayPal says it arrived"],
+    sees: ["Count the shelf from a photo; unclear counts are flagged for you", "Answer a question only where the day doesn't add up", "Pay each grower and watch whether PayPal says it arrived"],
     cta: "Open the owner view",
   },
   {
@@ -41,7 +41,7 @@ const LOOP: { title: string; body: string }[] = [
   { title: "Snap or tap your basket", body: "Take a photo of anything on hand, or add eggs and honey with the + buttons." },
   { title: "Pay with a sandbox buyer", body: "When PayPal asks you to log in, use a sandbox Personal account. No real money moves." },
   { title: "Watch it land", body: "Keep the owner view open. Your payment appears in today's table within about ten seconds." },
-  { title: "Close the day", body: "Count the shelf at opening and closing, log any restocks or cash sales, and see what is still unexplained." },
+  { title: "Close the day", body: "Count the shelf at opening and closing. Candid asks one question per gap: sold for cash, given away, restocked, or unknown." },
   { title: "Pay the growers", body: "Send one Payouts batch, then follow each grower's payment: received, on its way, unclaimed or owed again." },
 ];
 

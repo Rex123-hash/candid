@@ -1,4 +1,4 @@
-import type { Sale, ShelfCount, Stand, StockMove } from "./types";
+import type { Acknowledgement, ExceptionKind, Sale, ShelfCount, Stand, StockMove } from "./types";
 
 export type ReconcileLine = {
   itemId: string;
@@ -110,6 +110,44 @@ export function reconcile(stand: Stand, open: ShelfCount, close: ShelfCount, sal
     paidRate: takenTotal === 0 ? null : (takenTotal - unpaidTotal) / takenTotal,
     needsReview: lines.filter((l) => l.overAccounted > 0 || l.unexpectedStock > 0).map((l) => l.itemId),
   };
+}
+
+export type ClosingQuestion = {
+  itemId: string;
+  name: string;
+  kind: ExceptionKind;
+  /** How many units the question is about. */
+  qty: number;
+  /** Value of those units at the stand's price (for unexplained items). */
+  cents: number;
+  /** The owner answered "I don't know": kept on record, still counted as unexplained. */
+  acknowledged: boolean;
+};
+
+/**
+ * Turns the reconciliation into the few questions the owner actually has to
+ * answer. Everything that adds up needs no attention; each gap becomes one question.
+ */
+export function closingQuestions(stand: Stand, r: Reconciliation, closeId: string, acks: Acknowledgement[] = []): ClosingQuestion[] {
+  const price = new Map(stand.items.map((i) => [i.id, i.priceCents]));
+  const answered = new Set(acks.filter((a) => a.closeId === closeId).map((a) => `${a.itemId}:${a.kind}`));
+  const questions: ClosingQuestion[] = [];
+  for (const line of r.lines) {
+    const add = (kind: ExceptionKind, qty: number) =>
+      questions.push({
+        itemId: line.itemId,
+        name: line.name,
+        kind,
+        qty,
+        cents: kind === "unexplained" ? qty * (price.get(line.itemId) ?? 0) : 0,
+        acknowledged: answered.has(`${line.itemId}:${kind}`),
+      });
+    if (line.unpaid > 0) add("unexplained", line.unpaid);
+    if (line.overAccounted > 0) add("over", line.overAccounted);
+    if (line.unexpectedStock > 0) add("surplus", line.unexpectedStock);
+  }
+  // Money first: unexplained items, then counts that don't add up.
+  return questions.sort((a, b) => Number(a.acknowledged) - Number(b.acknowledged) || b.cents - a.cents);
 }
 
 function bump(map: Map<string, number>, key: string, by: number) {

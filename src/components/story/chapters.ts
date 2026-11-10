@@ -25,8 +25,8 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "cashbox",
     kicker: "The problem",
-    title: "The cash box is the weak spot.",
-    body: "Cash boxes get stolen, most people carry no cash, and the owner never learns what went missing.",
+    title: "Closing up is the hard part.",
+    body: "Most passers-by carry no cash, the tin gets emptied, and every evening someone has to work out what sold, what's missing and who is owed what.",
     camera: [1.6, 1.4, 2.6],
     target: [0.9, 0.05, 0.15],
   },
@@ -49,8 +49,8 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "count",
     kicker: "Step 3 · Close",
-    title: "Know what went missing.",
-    body: "At closing, one shelf photo is compared with every payment, so the owner sees the gap per item.",
+    title: "Close by answering questions.",
+    body: "One shelf photo is checked against every payment and restock. Candid only asks about what doesn't add up.",
     camera: [0.1, 5.2, 1.4],
     target: [0.1, -0.2, 0],
   },
