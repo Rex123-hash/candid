@@ -6,7 +6,7 @@ A customer scans the stand's QR code and takes one photo of their basket. Gemini
 
 > Sandbox only. No real money moves. The demo stand and its growers are fictional.
 
-- **Live demo:** _(added at deploy)_
+- **Live demo:** https://candid-199683411709.us-central1.run.app
 - **Video (under 3 minutes):** _(added at submission)_
 
 ## Try it in two minutes
