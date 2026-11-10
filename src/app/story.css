@@ -585,6 +585,8 @@ html.is-preloading body {
 }
 
 .preloader {
+  /* failsafe: if scripts never load, the loader still gets out of the way */
+  animation: pl-failsafe 0s linear 10s forwards;
   position: fixed;
   inset: 0;
   z-index: 300;
@@ -594,6 +596,13 @@ html.is-preloading body {
   gap: 28px;
   color: var(--n-cream, #f6efe4);
   pointer-events: none;
+}
+
+@keyframes pl-failsafe {
+  to {
+    visibility: hidden;
+    opacity: 0;
+  }
 }
 
 /* the two shutter halves carry the background so they can slide apart */
