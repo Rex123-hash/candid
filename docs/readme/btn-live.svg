@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="236" height="48" viewBox="0 0 236 48" role="img" aria-label="Open the live demo">
+  <rect x="0.5" y="0.5" width="235" height="47" rx="24" fill="#16130f" stroke="#4a4034"/>
+  <text x="26" y="30" font-family="'Schibsted Grotesk','Helvetica Neue',Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#f7f5f0">Open the live demo</text>
+  <g transform="translate(192 12)" fill="none" stroke="#f5a524" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12h14m-5-5 5 5-5 5"/>
+  </g>
+</svg>

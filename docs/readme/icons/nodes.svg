@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="nodes">
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="#f7f5f0" stroke="#e2d9c8"/>
+  <path d="M5 9.5V7a2 2 0 0 1 2-2h2.5" fill="none" stroke="#f5a524" stroke-width="1.6" stroke-linecap="round"/>
+  <g transform="translate(5 5) scale(0.9166)" fill="none" stroke="#16130f" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6.1 7.7l4.8 8.6M17.9 7.7l-4.8 8.6"/></g>
+</svg>
