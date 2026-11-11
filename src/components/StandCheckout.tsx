@@ -48,7 +48,7 @@ export function StandCheckout({ stand }: { stand: PublicStand }) {
 
   async function readPhoto(file: File) {
     setReading(true);
-    setStatus({ message: "Reading your photo…", tone: "info" });
+    setStatus({ message: "Reading your photo… This usually takes 5 to 15 seconds. You can also add items with the + buttons.", tone: "info" });
     try {
       const image = await photoToJpeg(file);
       const result = await api<BasketReading>(`/api/stands/${stand.id}/basket`, { body: image });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sanitiseCounts } from "@/lib/ai";
 import { demoStandRecord } from "@/lib/demo";
 import { closingQuestions, reconcile } from "@/lib/reconcile";
-import { applyPayoutStatus, needsStatusCheck, senderItemId, settle } from "@/lib/settlement";
+import { applyPayoutStatus, applySendOutcome, needsStatusCheck, newPayoutIntent, NOT_SENT, senderItemId, SENDING, settle } from "@/lib/settlement";
 import type { PayoutItemStatus, PayoutLine, PayoutRecord, Sale, ShelfCount, StockMove } from "@/lib/types";
 
 const stand = demoStandRecord().stand;
@@ -119,8 +119,8 @@ describe("closingQuestions", () => {
   it("keeps an 'I don't know' answer on record without explaining the gap away", () => {
     const r = reconcile(stand, o, c, paid, [move("restock", 5)]);
     const acks = [
-      { closeId: c.id, itemId: "honey", kind: "unexplained" as const, createdAt: "2026-11-12T18:05:00.000Z" },
-      { closeId: "an-older-close", itemId: "tomatoes", kind: "surplus" as const, createdAt: "2026-11-11T18:05:00.000Z" },
+      { closeId: c.id, itemId: "honey", kind: "unexplained" as const, qty: 3, createdAt: "2026-11-12T18:05:00.000Z" },
+      { closeId: "an-older-close", itemId: "tomatoes", kind: "surplus" as const, qty: 2, createdAt: "2026-11-11T18:05:00.000Z" },
     ];
     const qs = closingQuestions(stand, r, c.id, acks);
     expect(qs.map((q) => [q.itemId, q.acknowledged])).toEqual([
@@ -128,6 +128,21 @@ describe("closingQuestions", () => {
       ["honey", true],
     ]);
     expect(r.unpaidTotal).toBe(3);
+  });
+
+  it("asks again when the gap changes after an 'I don't know'", () => {
+    // Owner said "I don't know" about 1 jar while a cash entry covered 2 more. Undoing that entry makes the gap 3.
+    const withCash = reconcile(stand, o, c, paid, [move("restock", 5), move("cash", 2)]);
+    const ack = { closeId: c.id, itemId: "honey", kind: "unexplained" as const, qty: 1, createdAt: "2026-11-12T18:05:00.000Z" };
+    expect(closingQuestions(stand, withCash, c.id, [ack]).find((q) => q.itemId === "honey")).toMatchObject({ qty: 1, acknowledged: true });
+    const cashUndone = reconcile(stand, o, c, paid, [move("restock", 5)]);
+    expect(closingQuestions(stand, cashUndone, c.id, [ack]).find((q) => q.itemId === "honey")).toMatchObject({ qty: 3, acknowledged: false });
+  });
+
+  it("re-asks answers saved without a size", () => {
+    const r = reconcile(stand, o, c, paid, [move("restock", 5)]);
+    const legacy = { closeId: c.id, itemId: "honey", kind: "unexplained" as const, createdAt: "2026-11-12T18:05:00.000Z" };
+    expect(closingQuestions(stand, r, c.id, [legacy]).find((q) => q.itemId === "honey")!.acknowledged).toBe(false);
   });
 });
 
@@ -191,7 +206,48 @@ describe("payout status from PayPal", () => {
     expect(needsStatusCheck(base, now)).toBe(true);
     expect(needsStatusCheck({ ...base, checkedAt: "2026-11-12T11:59:55.000Z" }, now)).toBe(false);
     expect(needsStatusCheck({ ...base, lines: [line("g-rosa", 600, "SUCCESS")] }, now)).toBe(false);
-    expect(needsStatusCheck({ ...base, createdAt: "2026-10-01T00:00:00.000Z" }, now)).toBe(false);
+    expect(needsStatusCheck({ ...base, batchId: "" }, now)).toBe(false);
+  });
+
+  it("keeps checking unresolved payouts past 31 days, at most hourly", () => {
+    const now = Date.parse("2026-11-12T12:00:00.000Z");
+    const old = { ...payout([line("g-rosa", 600, "UNCLAIMED")]), createdAt: "2026-10-01T00:00:00.000Z" };
+    expect(needsStatusCheck(old, now)).toBe(true);
+    expect(needsStatusCheck({ ...old, checkedAt: "2026-11-12T11:30:00.000Z" }, now)).toBe(false);
+    expect(needsStatusCheck({ ...old, checkedAt: "2026-11-12T10:30:00.000Z" }, now)).toBe(true);
+  });
+
+  it("matches status for payout records saved before per-line ids", () => {
+    const legacy = payout([{ growerId: "g-rosa", name: "Rosa", email: "r@x.test", cents: 600 }]);
+    applyPayoutStatus(legacy, { items: [{ payout_item_id: "I9", transaction_status: "SUCCESS", payout_item: { sender_item_id: senderItemId(legacy.id, "g-rosa") } }] });
+    expect(legacy.lines[0]).toMatchObject({ status: "SUCCESS", payoutItemId: "I9", senderItemId: "batch-1-g-rosa" });
+    expect(settle(stand, [sale("a", "2026-11-12T10:00:00.000Z", [["eggs", 1]])], [legacy]).settlements[0]).toMatchObject({ paidCents: 600, inFlightCents: 0 });
+  });
+});
+
+describe("payout sending", () => {
+  const sales = [sale("a", "2026-11-12T10:00:00.000Z", [["eggs", 1], ["honey", 1]])];
+  const intent = () => newPayoutIntent(stand.id, "candid-k1", settle(stand, sales, []).shares);
+
+  it("holds money in a saved-but-unsent payout so it can't be paid twice", () => {
+    const pending = intent();
+    expect(pending).toMatchObject({ status: SENDING, batchId: "" });
+    expect(settle(stand, sales, [pending]).shares).toEqual([]);
+    applySendOutcome(pending, { kind: "unknown" });
+    expect(pending.status).toBe(SENDING);
+    expect(settle(stand, sales, [pending]).shares).toEqual([]);
+  });
+
+  it("records a confirmed send, and makes a refused one owed again", () => {
+    const sent = intent();
+    applySendOutcome(sent, { kind: "sent", batchId: "B7", status: "PENDING" });
+    expect(sent).toMatchObject({ batchId: "B7", status: "PENDING" });
+    expect(sent.lines.every((l) => l.status === "PENDING")).toBe(true);
+
+    const refused = intent();
+    applySendOutcome(refused, { kind: "rejected", message: "Insufficient funds" });
+    expect(refused.status).toBe(NOT_SENT);
+    expect(settle(stand, sales, [refused]).shares.map((s) => s.cents)).toEqual([600, 900]);
   });
 });
 

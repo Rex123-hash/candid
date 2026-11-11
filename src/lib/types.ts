@@ -132,6 +132,8 @@ export type Acknowledgement = {
   closeId: string;
   itemId: string;
   kind: ExceptionKind;
+  /** The size of the gap the owner looked at. If the gap changes, the question opens again. */
+  qty?: number;
   createdAt: string;
 };
 

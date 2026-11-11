@@ -130,7 +130,9 @@ export type ClosingQuestion = {
  */
 export function closingQuestions(stand: Stand, r: Reconciliation, closeId: string, acks: Acknowledgement[] = []): ClosingQuestion[] {
   const price = new Map(stand.items.map((i) => [i.id, i.priceCents]));
-  const answered = new Set(acks.filter((a) => a.closeId === closeId).map((a) => `${a.itemId}:${a.kind}`));
+  // An answer covers the gap as it was when the owner answered. If an entry is
+  // added or undone and the gap changes size, the question is asked again.
+  const answered = new Set(acks.filter((a) => a.closeId === closeId && a.qty !== undefined).map((a) => `${a.itemId}:${a.kind}:${a.qty}`));
   const questions: ClosingQuestion[] = [];
   for (const line of r.lines) {
     const add = (kind: ExceptionKind, qty: number) =>
@@ -140,7 +142,7 @@ export function closingQuestions(stand: Stand, r: Reconciliation, closeId: strin
         kind,
         qty,
         cents: kind === "unexplained" ? qty * (price.get(line.itemId) ?? 0) : 0,
-        acknowledged: answered.has(`${line.itemId}:${kind}`),
+        acknowledged: answered.has(`${line.itemId}:${kind}:${qty}`),
       });
     if (line.unpaid > 0) add("unexplained", line.unpaid);
     if (line.overAccounted > 0) add("over", line.overAccounted);

@@ -33,6 +33,8 @@ function gemini(): GoogleGenAI {
   return client;
 }
 
+const AI_TIMEOUT_MS = 30_000;
+
 async function askAboutImage<T>(schema: z.ZodType<T>, image: Image, system: string, prompt: string): Promise<T> {
   let text: string | undefined;
   try {
@@ -46,13 +48,16 @@ async function askAboutImage<T>(schema: z.ZodType<T>, image: Image, system: stri
         temperature: 0,
         // Recognising a few items against a short catalog needs little reasoning; low thinking keeps checkout fast.
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        // Model latency varies a lot. Past this, a person is better off typing the numbers.
+        abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
       },
     });
     text = response.text;
   } catch (error) {
     if (error instanceof AiUnavailableError) throw error;
     console.error("[candid] gemini", error);
-    throw new AiUnavailableError("Photo reading failed. Add items by hand instead.");
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    throw new AiUnavailableError(timedOut ? "Reading the photo is taking too long right now. Add items by hand instead." : "Photo reading failed. Add items by hand instead.");
   }
   const parsed = text ? schema.safeParse(safeJson(text)) : null;
   if (!parsed?.success) throw new AiUnavailableError("We couldn't read that photo clearly. Add items by hand instead.");

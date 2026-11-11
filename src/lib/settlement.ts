@@ -93,6 +93,48 @@ export function senderItemId(batchKey: string, growerId: string): string {
   return `${batchKey}-${growerId}`.slice(0, 63);
 }
 
+/**
+ * A payout we have committed to but PayPal hasn't confirmed receiving yet.
+ * It is saved before the request goes out, and its lines count as in flight,
+ * so nothing else can pay the same money while the outcome is unknown.
+ */
+export const SENDING = "SENDING";
+/** PayPal definitely refused the batch: nothing was sent, so the money is owed again. */
+export const NOT_SENT = "NOT_SENT";
+
+export function unfinishedPayout(payouts: PayoutRecord[]): PayoutRecord | undefined {
+  return payouts.find((p) => p.status === SENDING);
+}
+
+export function newPayoutIntent(standId: string, batchKey: string, shares: GrowerShare[], now = new Date()): PayoutRecord {
+  return {
+    id: batchKey,
+    standId,
+    batchId: "",
+    status: SENDING,
+    lines: shares.map((s) => ({ ...s, senderItemId: senderItemId(batchKey, s.growerId) })),
+    createdAt: now.toISOString(),
+  };
+}
+
+export type SendOutcome = { kind: "sent"; batchId: string; status: string } | { kind: "rejected"; message: string } | { kind: "unknown" };
+
+/** Records what happened to a payout we tried to send. An unknown outcome leaves it in SENDING for a safe retry. */
+export function applySendOutcome(record: PayoutRecord, outcome: SendOutcome): void {
+  if (record.status !== SENDING) return;
+  if (outcome.kind === "sent") {
+    record.batchId = outcome.batchId;
+    record.status = outcome.status;
+    for (const line of record.lines) line.status ??= "PENDING";
+  } else if (outcome.kind === "rejected") {
+    record.status = NOT_SENT;
+    for (const line of record.lines) {
+      line.status = "FAILED";
+      line.error = outcome.message.slice(0, 200);
+    }
+  }
+}
+
 export type PayPalBatchView = {
   batch_header?: { batch_status?: string };
   items?: {
@@ -112,8 +154,13 @@ export function applyPayoutStatus(record: PayoutRecord, batch: PayPalBatchView, 
     changed = true;
   }
   for (const item of batch.items ?? []) {
-    const line = record.lines.find((l) => l.senderItemId && l.senderItemId === item.payout_item?.sender_item_id);
+    // Records made before per-line ids were stored used the same rule, so the id can be rebuilt.
+    const line = record.lines.find((l) => (l.senderItemId ?? senderItemId(record.id, l.growerId)) === item.payout_item?.sender_item_id);
     if (!line) continue;
+    if (!line.senderItemId) {
+      line.senderItemId = senderItemId(record.id, line.growerId);
+      changed = true;
+    }
     const status = toItemStatus(item.transaction_status);
     const error = item.errors?.message ?? item.errors?.name;
     if (line.status !== status || line.payoutItemId !== item.payout_item_id || (error && line.error !== error)) {
@@ -127,12 +174,17 @@ export function applyPayoutStatus(record: PayoutRecord, batch: PayPalBatchView, 
   return changed;
 }
 
-/** A batch is worth asking PayPal about while any line could still change. */
+/**
+ * A batch is worth asking PayPal about while any line could still change, however
+ * old it is: unclaimed money comes back after 30 days and must become owed again.
+ * Batches older than a day are checked at most hourly.
+ */
 export function needsStatusCheck(record: PayoutRecord, now = Date.now(), minGapMs = 15_000): boolean {
   if (!record.batchId) return false;
-  if (now - Date.parse(record.createdAt) > 31 * 24 * 60 * 60_000) return false; // unclaimed money returns after 30 days
-  if (record.checkedAt && now - Date.parse(record.checkedAt) < minGapMs) return false;
-  return record.lines.some((l) => !l.status || l.status === "PENDING" || l.status === "UNCLAIMED" || l.status === "ONHOLD" || l.status === "UNKNOWN");
+  const age = now - Date.parse(record.createdAt);
+  const gap = age > 24 * 60 * 60_000 ? Math.max(minGapMs, 60 * 60_000) : minGapMs;
+  if (record.checkedAt && now - Date.parse(record.checkedAt) < gap) return false;
+  return record.lines.some((l) => payoutState(l.status) === "in-flight");
 }
 
 function toItemStatus(value: string | undefined): PayoutItemStatus {

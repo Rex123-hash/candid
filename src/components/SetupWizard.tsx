@@ -37,7 +37,7 @@ export function SetupWizard() {
 
   async function readSign(file: File) {
     setReading(true);
-    setStatus({ message: "Reading your price sign…", tone: "info" });
+    setStatus({ message: "Reading your price sign… This usually takes 5 to 15 seconds.", tone: "info" });
     try {
       const image = await photoToJpeg(file, 1600);
       const { items } = await api<{ items: { name: string; priceCents: number; unit: string; lookFor: string }[] }>("/api/ai/sign", { body: image });

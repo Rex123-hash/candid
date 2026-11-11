@@ -36,7 +36,7 @@ export function ShelfCheck({ standId, items, kind, onSaved, onStatus }: Props) {
 
   async function readShelf(file: File) {
     setBusy(true);
-    onStatus(`Counting the shelf for your ${label.toLowerCase()}…`, "info");
+    onStatus(`Counting the shelf for your ${label.toLowerCase()}… This usually takes 5 to 15 seconds.`, "info");
     try {
       const image = await photoToJpeg(file, 1600);
       const result = await api<{ counts: { itemId: string; qty: number; confident: boolean }[]; note: string }>(

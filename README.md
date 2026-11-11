@@ -468,6 +468,7 @@ A payments app for unattended stands has to be careful twice over: with money, a
 | Paid means PayPal said so | A sale becomes paid only on `COMPLETED` for exactly the priced amount | `src/lib/paypal.ts`, `src/lib/sales.ts` |
 | Received means PayPal said so | A grower's payout counts as received only on `SUCCESS` for their own line. Failed or returned money is owed again | `src/lib/settlement.ts` |
 | No double charges | One stable `PayPal-Request-Id` per sale, so retries return the same capture | `src/lib/sales.ts` |
+| No double payouts | Each payout is saved with a fixed batch id before it is sent and reused on every retry, so a lost reply can't pay a grower twice | `src/app/api/stands/[id]/payouts/route.ts` |
 | No capture without approval | The order status is checked before every capture | `src/lib/sales.ts` |
 | Webhooks are verified | PayPal's verify-signature API must accept the event. Only PayPal certificate URLs are allowed. Duplicates are no-ops | `src/app/api/webhooks/paypal/route.ts` |
 | Owner pages are private | Each stand has a random owner key, stored only as a hash. The browser keeps it in an httpOnly cookie, compared in constant time. The demo stand is left open for judging | `src/lib/http.ts` |
@@ -678,7 +679,7 @@ The `Dockerfile` builds Next.js in standalone mode on Node 22 and runs it as a n
 ## <img src="docs/readme/icons/check.svg" width="28" height="28" alt="" /> &nbsp;Tests and quality
 
 ```bash
-npm test            # 38 unit tests (Vitest)
+npm test            # 47 unit tests (Vitest)
 npm run typecheck   # TypeScript, strict
 npm run lint        # ESLint
 npm run build       # production build
@@ -692,9 +693,10 @@ The tests cover the rules that protect money, not the framework:
 | Capture | A sale is paid only after PayPal confirms. PayPal is never called twice for a captured sale. Retries reuse the request id. A cancelled popup is neither captured nor flagged. A capture whose reply was lost is recovered. |
 | Webhooks | Matching captures are confirmed. A second delivery changes nothing. A different amount is flagged, not trusted. |
 | Reconciliation | Unpaid items are found. Restocks reveal a gap that opening minus closing would hide. Removals and cash explain a gap; the rest stays unexplained. Entries before opening are ignored, entries after closing count. Uncaptured and out-of-hours sales are ignored. Nothing goes negative, and counts that don't add up are flagged. |
-| Closing questions | One question per gap, most money first, none for lines that add up. Over-counted items get a question instead of being hidden. "I don't know" is kept on record and never explains a gap away, and answers from an older closing count don't carry over. |
+| Closing questions | One question per gap, most money first, none for lines that add up. Over-counted items get a question instead of being hidden. "I don't know" is kept on record and never explains a gap away. If the gap changes size afterwards, the question opens again, and answers from an older closing count don't carry over. |
 | Grower settlement | Sales are split by grower. Money received or on its way is never sent twice. Failed or returned payouts become owed again. Older records without per-line status are treated as on their way. |
-| Payout status | PayPal's per-recipient status is matched to the right grower by sender item id. Only batches that can still change are checked, and not more than every 15 seconds. |
+| Payout sending | A payout is saved before PayPal is called. If PayPal's reply is lost, pressing again resends the same batch id, so a grower is never paid twice. A clear refusal means nothing was sent and the money is owed again; a server error stays unresolved rather than guessed. |
+| Payout status | PayPal's per-recipient status is matched to the right grower, including on records saved before per-line ids. Unresolved payouts keep being checked after 31 days (hourly), because unclaimed money comes back. |
 | AI clean-up | Unknown ids are dropped, duplicates merged and counts clamped. |
 | Sandbox guard | Only the sandbox host is ever used. Live mode, or any live host in any setting, is refused. |
 

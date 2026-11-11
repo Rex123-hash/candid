@@ -80,8 +80,12 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
   async function payGrowers() {
     setPaying(true);
     try {
-      setSummary(await api<StandSummary>(`/api/stands/${stand.id}/payouts`, { body: {} }));
-      notify("Payouts sent. Candid will show each grower's result as PayPal reports it.", "success");
+      const result = await api<StandSummary & { payoutOutcome?: "sent" | "rejected" | "unknown" }>(`/api/stands/${stand.id}/payouts`, { body: {} });
+      setSummary(result);
+      if (result.payoutOutcome === "rejected") notify("PayPal refused this payout, so nothing was sent. The money is still owed.", "error");
+      else if (result.payoutOutcome === "unknown")
+        notify("PayPal didn't confirm the payout. It is saved and won't be paid twice: press the button again to finish it.", "error");
+      else notify("Payouts sent. Candid will show each grower's result as PayPal reports it.", "success");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Payouts failed.", "error");
     } finally {
@@ -90,6 +94,7 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
   }
 
   const gaps = r ? r.unpaidTotal > 0 || r.needsReview.length > 0 : false;
+  const unfinished = summary.payouts.find((p) => p.status === "SENDING");
   const openQuestions = summary.questions.filter((q) => !q.acknowledged).length;
   const steps: { label: string; state: StepState }[] = [
     { label: "Opening count", state: summary.open ? "done" : "current" },
@@ -317,12 +322,14 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
         )}
         {growers.length ? (
           <div className="row">
-            <button type="button" className="btn" onClick={() => void payGrowers()} disabled={paying || summary.shares.length === 0}>
+            <button type="button" className="btn" onClick={() => void payGrowers()} disabled={paying || (!unfinished && summary.shares.length === 0)}>
               {paying
                 ? "Sending…"
-                : summary.shares.length
-                  ? `Send ${formatCents(summary.shares.reduce((t, s) => t + s.cents, 0))} in payouts`
-                  : "Nothing owed right now"}
+                : unfinished
+                  ? `Finish sending ${formatCents(unfinished.lines.reduce((t, l) => t + l.cents, 0))}`
+                  : summary.shares.length
+                    ? `Send ${formatCents(summary.shares.reduce((t, s) => t + s.cents, 0))} in payouts`
+                    : "Nothing owed right now"}
             </button>
             {summary.payouts.length ? (
               <button type="button" className="btn secondary" onClick={() => void checkPayouts(true)} disabled={checking}>
@@ -333,8 +340,14 @@ export function OwnerDashboard({ stand, growers, initial }: Props) {
         ) : null}
         {summary.payouts.length ? (
           <p className="hint">
-            Last batch <span className="mono">{summary.payouts[0].batchId}</span> ·{" "}
-            {summary.payouts[0].status === "SUCCESS" ? "processed by PayPal" : summary.payouts[0].status.toLowerCase()}
+            Last batch <span className="mono">{summary.payouts[0].batchId || summary.payouts[0].id}</span> ·{" "}
+            {summary.payouts[0].status === "SUCCESS"
+              ? "processed by PayPal"
+              : summary.payouts[0].status === "SENDING"
+                ? "waiting for PayPal to confirm"
+                : summary.payouts[0].status === "NOT_SENT"
+                  ? "refused by PayPal, nothing sent"
+                  : summary.payouts[0].status.toLowerCase()}
             {summary.payouts[0].checkedAt ? (
               <>
                 {" "}
