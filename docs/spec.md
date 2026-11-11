@@ -21,7 +21,7 @@
 
 ## Stack
 
-Next.js (App Router, TypeScript) on Node · `@paypal/paypal-server-sdk` for OAuth and orders (an APIMatic-generated SDK) · the PayPal REST API for Catalog Products, Payouts and webhook verification · PayPal JS SDK v6 in the browser · Google Gemini on Vertex AI (`@google/genai`, JSON-schema output, vision) · AG Grid Community for the owner's sales table · a file-based JSON store locally, with Upstash Redis when its env vars are set · Vitest for tests.
+Next.js (App Router, TypeScript) on Node · `@paypal/paypal-server-sdk` for OAuth and orders (an APIMatic-generated SDK) · the PayPal REST API for Catalog Products, Payouts and webhook verification · PayPal JS SDK v6 in the browser · Google Gemini on Vertex AI (`@google/genai`, JSON-schema output, vision) · AG Grid Community for the owner's sales table · Firestore on Cloud Run, a file-based JSON store locally (Upstash Redis optional) · Vitest for tests.
 
 ## Out of scope
 
