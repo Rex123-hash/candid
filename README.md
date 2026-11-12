@@ -739,6 +739,13 @@ What we'd build next:
 | Data UI | AG Grid Community |
 | Quality | Vitest, ESLint, TypeScript strict mode |
 
+### Sponsor tools
+
+| Sponsor | How Candid uses it | Where |
+| --- | --- | --- |
+| **APIMatic** | Every PayPal order is created, checked and captured through the official **PayPal Server SDK**, which APIMatic generates. Its typed controllers and built-in `PayPal-Request-Id` support are what make capture safe to retry. | `src/lib/paypal.ts` (`OrdersController`) |
+| **AG Grid** | The owner's "Today's payments" table is **AG Grid Community**: sortable, filterable, keyboard friendly, themed to match the app. | `src/components/SalesGrid.tsx` |
+
 ## <img src="docs/readme/icons/book.svg" width="28" height="28" alt="" /> &nbsp;License
 
 MIT. See [LICENSE](LICENSE).
